@@ -1,20 +1,41 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
-    provider = "prisma-client-js"
+  provider = "prisma-client-js"
 }
 
 datasource db {
-    provider = "mysql"
-    url      = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
-model Post {
-    id        Int      @id @default(autoincrement())
-    name      String
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+model FoodItem {
+  id              String      @id @default(uuid())
+  name            String
+  expirationDate  DateTime
+  quantity        Int
+  imageUrl        String?     // Optional, as not all items might have an image
+  keywords        String[]    // Storing keywords as an array of strings
+  placement       String      // e.g., "Pantry", "Fridge Shelf 1", "Freezer Drawer"
+  hidden          Boolean     @default(false)
 
-    @@index([name])
+  // Relationships to FoodCategories for normalization
+  categories FoodCategoryOnFoodItem[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model FoodCategory {
+  id              String      @id @default(uuid())
+  name            String      @unique // e.g., "Breakfast", "Lunch", "Veggie"
+  foodItems       FoodCategoryOnFoodItem[]
+}
+
+// Junction table for many-to-many relationship between FoodItem and FoodCategory
+model FoodCategoryOnFoodItem {
+  foodItemId     String
+  foodCategoryId String
+  foodItem       FoodItem     @relation(fields: [foodItemId], references: [id], onDelete: Cascade)
+  foodCategory   FoodCategory @relation(fields: [foodCategoryId], references: [id], onDelete: Cascade)
+
+  @@id([foodItemId, foodCategoryId]) // Composite primary key
 }
