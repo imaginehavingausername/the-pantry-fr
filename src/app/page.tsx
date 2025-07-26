@@ -1,37 +1,59 @@
-import Link from "next/link";
+"use client"
 
-export default function HomePage() {
+import { useState } from "react"
+import Link from "next/link"
+import { Menu, Plus, Search } from "lucide-react"
+import { Button } from "~/components/ui/button"
+import { Input } from "~/components/ui/input"
+import FoodItem from "~/components/food-item"
+import SidebarNav from "~/components/sidebar-nav"
+
+export default function Home() {
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-[#2e026d] to-[#15162c] text-white">
-      <div className="container flex flex-col items-center justify-center gap-12 px-4 py-16">
-        <h1 className="text-5xl font-extrabold tracking-tight text-white sm:text-[5rem]">
-          Create <span className="text-[hsl(280,100%,70%)]">T3</span> App
-        </h1>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-8">
-          <Link
-            className="flex max-w-xs flex-col gap-4 rounded-xl bg-white/10 p-4 text-white hover:bg-white/20"
-            href="https://create.t3.gg/en/usage/first-steps"
-            target="_blank"
-          >
-            <h3 className="text-2xl font-bold">First Steps →</h3>
-            <div className="text-lg">
-              Just the basics - Everything you need to know to set up your
-              database and authentication.
-            </div>
-          </Link>
-          <Link
-            className="flex max-w-xs flex-col gap-4 rounded-xl bg-white/10 p-4 text-white hover:bg-white/20"
-            href="https://create.t3.gg/en/introduction"
-            target="_blank"
-          >
-            <h3 className="text-2xl font-bold">Documentation →</h3>
-            <div className="text-lg">
-              Learn more about Create T3 App, the libraries it uses, and how to
-              deploy it.
-            </div>
+    <div className="min-h-screen bg-white">
+      <header className="sticky top-0 bg-white border-b border-gray-200 z-10">
+        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+          <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => setSidebarOpen(true)}>
+            <Menu className="h-6 w-6" />
+          </Button>
+          <div className="h-10 w-10 rounded-full bg-[#528F04] flex items-center justify-center">
+            {/* Logo will go here */}
+          </div>
+          <div className="w-10"></div> {/* Spacer for alignment */}
+        </div>
+      </header>
+
+      <main className="container mx-auto px-4 py-6">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-3xl font-bold">the pantry</h1>
+          <Link href="/add-food">
+            <Button className="bg-[#528F04] hover:bg-[#3e6b03]">
+              <Plus className="h-5 w-5" />
+            </Button>
           </Link>
         </div>
-      </div>
-    </main>
-  );
+
+        <div className="relative mb-6">
+          <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+          <Input className="pl-10 border-gray-300 border rounded-md w-full" placeholder="Search by name or key word" />
+        </div>
+
+        <div className="space-y-4">
+          <Link href="/product/1">
+            <FoodItem name="Organic Apples" quantity={5} location="Fruit Basket" expires="2023-08-15" />
+          </Link>
+          <Link href="/product/2">
+            <FoodItem name="Whole Wheat Bread" quantity={1} location="Pantry Shelf" expires="2023-08-10" />
+          </Link>
+          <Link href="/product/3">
+            <FoodItem name="Greek Yogurt" quantity={3} location="Refrigerator" expires="2023-08-05" />
+          </Link>
+        </div>
+      </main>
+
+      <SidebarNav username="johndoe" isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+    </div>
+  )
 }
