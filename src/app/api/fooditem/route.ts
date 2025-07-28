@@ -1,19 +1,70 @@
 // import next response which will be used to respond to the request frontend makes 
 // import prisma client which will be used to query the database
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 
 // make a variable which has everything about our db connection
 const prisma = new PrismaClient();
 
+// Type definitions for request bodies
+interface CreateFoodItemBody {
+  name: string;
+  expirationDate: string;
+  quantity: number;
+  imageUrl?: string;
+  keywords?: string[];
+  placement: string;
+  categoryNames?: string[];
+}
+
+interface UpdateFoodItemBody {
+  id: string;
+  name?: string;
+  expirationDate?: string;
+  quantity?: number;
+  imageUrl?: string;
+  keywords?: string[];
+  placement?: string;
+  hidden?: boolean;
+  categoryNames?: string[];
+}
+
+interface DeleteFoodItemBody {
+  id: string;
+}
+
+// Helper function to validate request body
+function isValidCreateBody(body: unknown): body is CreateFoodItemBody {
+  if (typeof body !== 'object' || body === null) return false;
+  const b = body as Record<string, unknown>;
+  return (
+    typeof b.name === 'string' &&
+    typeof b.expirationDate === 'string' &&
+    typeof b.quantity === 'number' &&
+    typeof b.placement === 'string'
+  );
+}
+
+function isValidUpdateBody(body: unknown): body is UpdateFoodItemBody {
+  if (typeof body !== 'object' || body === null) return false;
+  const b = body as Record<string, unknown>;
+  return typeof b.id === 'string';
+}
+
+function isValidDeleteBody(body: unknown): body is DeleteFoodItemBody {
+  if (typeof body !== 'object' || body === null) return false;
+  const b = body as Record<string, unknown>;
+  return typeof b.id === 'string';
+}
+
 // export a function which will be called by the frontend
 export async function GET(request: Request) {
-    // try catch block to handle errors
+  // try catch block to handle errors
   try {
     // create a new instance of the prisma client
     // use prisma client to query the database
     const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id'); 
+    const id = searchParams.get('id');
 
     // check if the id is present in the url, if not then return a error response
     if (!id) {
@@ -51,17 +102,18 @@ export async function GET(request: Request) {
     await prisma.$disconnect();
   }
 }
+
 // export a function which will be called by the frontend
 export async function POST(request: Request) {
-    // try catch block to handle errors
+  // try catch block to handle errors
   try {
-    const body = await request.json();
-    const { name, expirationDate, quantity, imageUrl, keywords, placement, categoryNames } = body;
+    const body: unknown = await request.json();
 
-    // check if all the required fields are present in the request body
-    if (!name || !expirationDate || !quantity || !placement) {
+    if (!isValidCreateBody(body)) {
       return NextResponse.json({ error: 'Missing required fields: name, expirationDate, quantity, placement.' }, { status: 400 });
     }
+
+    const { name, expirationDate, quantity, imageUrl, keywords, placement, categoryNames } = body;
 
     // create a variable to hold the new food item
     const newFoodItem = await prisma.foodItem.create({
@@ -69,8 +121,8 @@ export async function POST(request: Request) {
         name,
         expirationDate: new Date(expirationDate),
         quantity,
-        imageUrl,
-        keywords: keywords || [],
+        imageUrl: imageUrl ?? null,
+        keywords: keywords ?? [],
         placement,
         categories: {
           create: categoryNames?.map((categoryName: string) => ({
@@ -80,7 +132,7 @@ export async function POST(request: Request) {
                 create: { name: categoryName },
               },
             },
-          })),
+          })) ?? [],
         },
       },
       include: {
@@ -103,25 +155,18 @@ export async function POST(request: Request) {
     await prisma.$disconnect();
   }
 }
+
 export async function PUT(request: Request) {
   try {
-    const body = await request.json();
-    const { id, name, expirationDate, quantity, imageUrl, keywords, placement, hidden, categoryNames } = body;
+    const body: unknown = await request.json();
 
-    if (!id) {
+    if (!isValidUpdateBody(body)) {
       return NextResponse.json({ error: 'Food item ID is required for update.' }, { status: 400 });
     }
 
-    const updateData: {
-      name?: string;
-      expirationDate?: Date;
-      quantity?: number;
-      imageUrl?: string;
-      keywords?: string[];
-      placement?: string;
-      hidden?: boolean;
-      categories?: any; // Prisma will handle this structure
-    } = {};
+    const { id, name, expirationDate, quantity, imageUrl, keywords, placement, hidden, categoryNames } = body;
+
+    const updateData: Prisma.FoodItemUpdateInput = {};
 
     if (name !== undefined) updateData.name = name;
     if (expirationDate !== undefined) updateData.expirationDate = new Date(expirationDate);
@@ -170,14 +215,16 @@ export async function PUT(request: Request) {
     await prisma.$disconnect();
   }
 }
+
 export async function DELETE(request: Request) {
   try {
-    const body = await request.json();
-    const { id } = body;
+    const body: unknown = await request.json();
 
-    if (!id) {
+    if (!isValidDeleteBody(body)) {
       return NextResponse.json({ error: 'Food item ID is required for deletion.' }, { status: 400 });
     }
+
+    const { id } = body;
 
     const deletedFoodItem = await prisma.foodItem.delete({
       where: { id: id },
@@ -186,7 +233,7 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ message: 'Food item deleted successfully.', deletedId: deletedFoodItem.id }, { status: 200 });
   } catch (error) {
     console.error(error);
-    if (error instanceof Error && (error as any).code === 'P2025') { // Prisma error code for record not found
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
       return NextResponse.json({ error: 'Food item not found.' }, { status: 404 });
     }
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

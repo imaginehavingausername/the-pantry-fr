@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useParams } from "next/navigation"
 import { ArrowLeft, Trash2 } from "lucide-react"
 import { Button } from "~/components/ui/button"
 import { Input } from "~/components/ui/input"
@@ -19,7 +19,9 @@ import {
   AlertDialogTitle,
 } from "~/components/ui/alert-dialog"
 
-export default function ProductDetail({ params }: { params: { id: string } }) {
+export default function ProductDetail() {
+  const params = useParams()
+  const id = params.id as string
   const router = useRouter()
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
 
@@ -47,7 +49,7 @@ export default function ProductDetail({ params }: { params: { id: string } }) {
 
         <Separator className="my-4" />
 
-        <h1 className="text-3xl font-bold mb-6">Add Food</h1>
+        <h1 className="text-3xl font-bold mb-6">Edit Food</h1>
 
         <form className="space-y-6">
           <div>
