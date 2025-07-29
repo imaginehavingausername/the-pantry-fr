@@ -7,9 +7,16 @@ import { Button } from "~/components/ui/button"
 import { Input } from "~/components/ui/input"
 import FoodItem from "~/components/food-item"
 import SidebarNav from "~/components/sidebar-nav"
+import { useUser } from "@clerk/nextjs"
+import { redirect } from "next/navigation"
 
 export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+    const { user } = useUser()
+
+  if (!user) {
+    redirect('/sign-up')
+  }
 
   return (
     <div className="min-h-screen bg-white">
