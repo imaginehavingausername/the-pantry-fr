@@ -5,7 +5,7 @@ import { Home, Users, User } from "lucide-react"
 import { SignOutButton, useUser } from "@clerk/nextjs" // import clerk things
 
 interface SidebarNavProps {
-  username: string
+  username: any
   isOpen: boolean
   onClose: () => void
 }

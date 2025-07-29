@@ -64,19 +64,36 @@ export async function GET(request: Request) {
   if (!userId) { 
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+  
   // try catch block to handle errors
   try {
-    // create a new instance of the prisma client
-    // use prisma client to query the database
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
-    // check if the id is present in the url, if not then return a error response
+    // If no ID is provided, return all food items for the user
     if (!id) {
-      return NextResponse.json({ error: 'Food item ID is required as a query parameter (e.g., ?id=YOUR_ID).' }, { status: 400 });
+      const foodItems = await prisma.foodItem.findMany({
+        where: {
+          // Add user filtering here if you have a userId field in your foodItem model
+          // userId: userId,
+          hidden: false, // Only return non-hidden items
+        },
+        include: {
+          categories: {
+            include: {
+              foodCategory: true,
+            },
+          },
+        },
+        orderBy: {
+          expirationDate: 'asc', // Order by expiration date, earliest first
+        },
+      });
+
+      return NextResponse.json(foodItems, { status: 200 });
     }
 
-    // use prisma client to query the database for the food item with the given id
+    // If ID is provided, return the specific food item
     const foodItem = await prisma.foodItem.findUnique({
       where: {
         id: id,
@@ -90,7 +107,7 @@ export async function GET(request: Request) {
       },
     });
 
-    //check if the food item was found, if it wasn't then return a 404 error
+    // check if the food item was found, if it wasn't then return a 404 error
     if (!foodItem) {
       return NextResponse.json({ error: 'Food item not found.' }, { status: 404 });
     }
@@ -98,11 +115,9 @@ export async function GET(request: Request) {
     // return the food item as a json response
     return NextResponse.json(foodItem, { status: 200 });
 
-    // catch any errors that occur during the execution of the above code
   } catch (error) {
-    console.error('Error fetching food item:', error);
+    console.error('Error fetching food item(s):', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
-    // finally, make sure to close the database connection
   } finally {
     await prisma.$disconnect();
   }
