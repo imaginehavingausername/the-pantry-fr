@@ -2,6 +2,7 @@
 // import prisma client which will be used to query the database
 import { NextResponse } from 'next/server';
 import { PrismaClient, Prisma } from '@prisma/client';
+import { auth } from "@clerk/nextjs/server";
 
 // make a variable which has everything about our db connection
 const prisma = new PrismaClient();
@@ -59,6 +60,10 @@ function isValidDeleteBody(body: unknown): body is DeleteFoodItemBody {
 
 // export a function which will be called by the frontend
 export async function GET(request: Request) {
+  const { userId } = await auth() 
+  if (!userId) { 
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   // try catch block to handle errors
   try {
     // create a new instance of the prisma client
@@ -107,6 +112,10 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   // try catch block to handle errors
   try {
+    const { userId } = await auth() 
+    if (!userId) { 
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     const body: unknown = await request.json();
 
     if (!isValidCreateBody(body)) {
@@ -158,6 +167,10 @@ export async function POST(request: Request) {
 
 export async function PUT(request: Request) {
   try {
+    const { userId } = await auth() 
+    if (!userId) { 
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     const body: unknown = await request.json();
 
     if (!isValidUpdateBody(body)) {
@@ -218,6 +231,10 @@ export async function PUT(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
+    const { userId } = await auth() 
+    if (!userId) { 
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     const body: unknown = await request.json();
 
     if (!isValidDeleteBody(body)) {
