@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { Home, Users, User } from "lucide-react"
+import { SignOutButton, useUser } from "@clerk/nextjs" // import clerk things
 
 interface SidebarNavProps {
   username: string
@@ -11,6 +12,9 @@ interface SidebarNavProps {
 
 export default function SidebarNav({ username, isOpen, onClose }: SidebarNavProps) {
   if (!isOpen) return null
+
+  // initialise clerk things and hold them in a variable called user
+  const { user } = useUser()
 
   return (
     <div className="fixed inset-0 z-50 flex">
@@ -27,11 +31,18 @@ export default function SidebarNav({ username, isOpen, onClose }: SidebarNavProp
             <Users className="h-5 w-5" />
             <span>Users</span>
           </Link>
-          <div className="flex items-center gap-3 p-2 text-gray-400 rounded-md cursor-not-allowed">
+          {/* show full name */}
+          <div className="flex items-center gap-3 p-2 rounded-md">
             <User className="h-5 w-5" />
-            <span>{username}</span>
+            <Link href="/user-profile">
+            <span>{user?.fullName || username}</span>
+            </Link>
           </div>
         </nav>
+        {/* add signout button  */}
+        <div className="space-y-4 flex flex-col gap-2 p-4">
+          <SignOutButton>Sign out</SignOutButton>
+        </div>
       </div>
     </div>
   )
