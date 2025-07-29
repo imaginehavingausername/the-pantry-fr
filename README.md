@@ -31,6 +31,6 @@ Follow our deployment guides for [Vercel](https://create.t3.gg/en/deployment/ver
 ## todo 
 - [] x frontend css fixes 
 - [] x host 
-- [] authentication
+- [] x authentication
 - [] host images (uploadthing)
 - [] actually link db and pantry
