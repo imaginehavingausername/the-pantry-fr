@@ -144,54 +144,56 @@ export default function Home() {
       </header>
 
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6 gap-4 sm:gap-0">
-          <h1 className="text-2xl sm:text-3xl font-bold text-center sm:text-left">the pantry</h1>
+        <div className="flex items-center justify-between mb-4 sm:mb-6">
+          <h1 className="text-2xl sm:text-3xl font-bold">the pantry</h1>
           <Link href="/add-food">
-            <Button className="flex items-center justify-center bg-[#528F04] hover:bg-[#3e6b03] w-10 h-10 sm:w-10 sm:h-10 mx-auto sm:mx-0">
+            <Button className="flex items-center justify-center bg-[#528F04] hover:bg-[#3e6b03] w-10 h-10 sm:w-10 sm:h-10">
               <span className="font-bold text-2xl sm:text-4xl">+</span>
             </Button>
           </Link>
         </div>
 
-        <div className="relative mb-4 sm:mb-6">
-          <Input
-            className="border-gray-300 text-gray-500 placeholder-grey-500 border rounded-full w-full text-sm sm:text-base py-2 sm:py-3"
-            placeholder="Search by name or key word"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+        <div className="flex flex-col sm:flex-row gap-4 mb-4 sm:mb-6">
+          <div className="relative flex-1">
+            <Input
+              className="border-gray-300 text-gray-500 placeholder-grey-500 border rounded-full w-full text-sm sm:text-base py-2 sm:py-3"
+              placeholder="Search by name or key word"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          
+          {/* Sorting Dropdown */}
+          <div className="flex justify-center sm:justify-end">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="flex items-center gap-2 text-sm sm:text-base px-3 sm:px-4 py-2">
+                  <span className="hidden sm:inline">Sort By</span>
+                  <span className="sm:hidden">Sort</span>
+                  {sortOrder === 'name-asc' && <ArrowDownNarrowWide className="h-3 w-3 sm:h-4 sm:w-4" />}
+                  {sortOrder === 'quantity-desc' && <ArrowDownNarrowWide className="h-3 w-3 sm:h-4 sm:w-4" />}
+                  {sortOrder === 'quantity-asc' && <ArrowUpNarrowWide className="h-3 w-3 sm:h-4 sm:w-4" />}
+                  {sortOrder === 'date-new-to-old' && <CalendarDays className="h-3 w-3 sm:h-4 sm:w-4" />}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={() => setSortOrder('name-asc')} className="text-sm">
+                  Name (A-Z)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSortOrder('quantity-desc')} className="text-sm">
+                  Quantity (High to Low)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSortOrder('quantity-asc')} className="text-sm">
+                  Quantity (Low to High)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSortOrder('date-new-to-old')} className="text-sm">
+                  Date (New to Old)
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+          {/* End Sorting Dropdown */}
         </div>
-
-        {/* Sorting Dropdown */}
-        <div className="mb-4 sm:mb-6 flex justify-center sm:justify-end">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="flex items-center gap-2 text-sm sm:text-base px-3 sm:px-4 py-2">
-                <span className="hidden sm:inline">Sort By</span>
-                <span className="sm:hidden">Sort</span>
-                {sortOrder === 'name-asc' && <ArrowDownNarrowWide className="h-3 w-3 sm:h-4 sm:w-4" />}
-                {sortOrder === 'quantity-desc' && <ArrowDownNarrowWide className="h-3 w-3 sm:h-4 sm:w-4" />}
-                {sortOrder === 'quantity-asc' && <ArrowUpNarrowWide className="h-3 w-3 sm:h-4 sm:w-4" />}
-                {sortOrder === 'date-new-to-old' && <CalendarDays className="h-3 w-3 sm:h-4 sm:w-4" />}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem onClick={() => setSortOrder('name-asc')} className="text-sm">
-                Name (A-Z)
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSortOrder('quantity-desc')} className="text-sm">
-                Quantity (High to Low)
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSortOrder('quantity-asc')} className="text-sm">
-                Quantity (Low to High)
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSortOrder('date-new-to-old')} className="text-sm">
-                Date (New to Old)
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-        {/* End Sorting Dropdown */}
 
         <div className="space-y-3 sm:space-y-4">
           {loading && (
