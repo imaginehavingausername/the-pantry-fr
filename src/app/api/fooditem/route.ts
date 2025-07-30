@@ -5,9 +5,23 @@ import { PrismaClient, Prisma } from '@prisma/client';
 import { auth } from "@clerk/nextjs/server";
 import { UTApi } from "uploadthing/server";
 
-// make a variable which has everything about our db connection
-const prisma = new PrismaClient();
-const utapi = new UTApi();
+// Singleton pattern for Prisma Client - prevents connection pool exhaustion
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClient | undefined;
+};
+
+const prisma = globalForPrisma.prisma ?? new PrismaClient();
+
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+
+// Singleton for UTApi
+const globalForUTApi = globalThis as unknown as {
+  utapi: UTApi | undefined;
+};
+
+const utapi = globalForUTApi.utapi ?? new UTApi();
+
+if (process.env.NODE_ENV !== 'production') globalForUTApi.utapi = utapi;
 
 // Type definitions for request bodies
 interface CreateFoodItemBody {
@@ -41,7 +55,6 @@ function extractFileKeyFromUrl(url: string): string | null {
   try {
     // UploadThing URLs typically look like: https://utfs.io/f/[FILE_KEY]
     const match = url.match(/\/f\/([^/?]+)/);
-    // Use nullish coalescing to ensure that if match[1] is undefined, it becomes null
     return match?.[1] ?? null;
   } catch {
     return null;
@@ -72,14 +85,37 @@ function isValidDeleteBody(body: unknown): body is DeleteFoodItemBody {
   return typeof b.id === 'string';
 }
 
+// Optimized select fields to reduce data transfer
+const foodItemSelect = {
+  id: true,
+  name: true,
+  expirationDate: true,
+  quantity: true,
+  imageUrl: true,
+  keywords: true,
+  placement: true,
+  hidden: true,
+  createdAt: true,
+  updatedAt: true,
+  categories: {
+    select: {
+      foodCategory: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
+  },
+};
+
 // export a function which will be called by the frontend
 export async function GET(request: Request) {
-  const { userId } = await auth() 
-  if (!userId) { 
+  const { userId } = await auth();
+  if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  
-  // try catch block to handle errors
+
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -92,13 +128,7 @@ export async function GET(request: Request) {
           // userId: userId,
           hidden: false, // Only return non-hidden items
         },
-        include: {
-          categories: {
-            include: {
-              foodCategory: true,
-            },
-          },
-        },
+        select: foodItemSelect,
         orderBy: {
           expirationDate: 'asc', // Order by expiration date, earliest first
         },
@@ -112,13 +142,7 @@ export async function GET(request: Request) {
       where: {
         id: id,
       },
-      include: {
-        categories: {
-          include: {
-            foodCategory: true,
-          },
-        },
-      },
+      select: foodItemSelect,
     });
 
     // check if the food item was found, if it wasn't then return a 404 error
@@ -132,19 +156,18 @@ export async function GET(request: Request) {
   } catch (error) {
     console.error('Error fetching food item(s):', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
-  } finally {
-    await prisma.$disconnect();
   }
+  // Removed finally block - let connection pooling handle it
 }
 
 // export a function which will be called by the frontend
 export async function POST(request: Request) {
-  // try catch block to handle errors
   try {
-    const { userId } = await auth() 
-    if (!userId) { 
+    const { userId } = await auth();
+    if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    
     const body: unknown = await request.json();
 
     if (!isValidCreateBody(body)) {
@@ -153,53 +176,45 @@ export async function POST(request: Request) {
 
     const { name, expirationDate, quantity, imageUrl, keywords, placement, categoryNames } = body;
 
-    // create a variable to hold the new food item
-    const newFoodItem = await prisma.foodItem.create({
-      data: {
-        name,
-        expirationDate: new Date(expirationDate),
-        quantity,
-        imageUrl: imageUrl || null,
-        keywords: keywords ?? [],
-        placement,
-        categories: {
-          create: categoryNames?.map((categoryName: string) => ({
-            foodCategory: {
-              connectOrCreate: {
-                where: { name: categoryName },
-                create: { name: categoryName },
+    // Use transaction for atomic operations
+    const newFoodItem = await prisma.$transaction(async (tx) => {
+      return await tx.foodItem.create({
+        data: {
+          name,
+          expirationDate: new Date(expirationDate),
+          quantity,
+          imageUrl: imageUrl || null,
+          keywords: keywords ?? [],
+          placement,
+          categories: {
+            create: categoryNames?.map((categoryName: string) => ({
+              foodCategory: {
+                connectOrCreate: {
+                  where: { name: categoryName },
+                  create: { name: categoryName },
+                },
               },
-            },
-          })) ?? [],
-        },
-      },
-      include: {
-        categories: {
-          include: {
-            foodCategory: true,
+            })) ?? [],
           },
         },
-      },
+        select: foodItemSelect,
+      });
     });
 
-    // return the new food item as a json response
     return NextResponse.json(newFoodItem, { status: 201 });
-    // catch any errors that occur during the execution of the above code
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
-    // finally, make sure to close the database connection
-  } finally {
-    await prisma.$disconnect();
   }
 }
 
 export async function PUT(request: Request) {
   try {
-    const { userId } = await auth() 
-    if (!userId) { 
+    const { userId } = await auth();
+    if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    
     const body: unknown = await request.json();
 
     if (!isValidUpdateBody(body)) {
@@ -218,52 +233,48 @@ export async function PUT(request: Request) {
     if (placement !== undefined) updateData.placement = placement;
     if (hidden !== undefined) updateData.hidden = hidden;
 
-    if (categoryNames !== undefined) {
-      // First, disconnect existing categories
-      await prisma.foodCategoryOnFoodItem.deleteMany({
-        where: { foodItemId: id },
-      });
+    // Use transaction for category updates
+    const updatedFoodItem = await prisma.$transaction(async (tx) => {
+      if (categoryNames !== undefined) {
+        // First, disconnect existing categories
+        await tx.foodCategoryOnFoodItem.deleteMany({
+          where: { foodItemId: id },
+        });
 
-      // Then, connect new or existing categories
-      updateData.categories = {
-        create: categoryNames.map((categoryName: string) => ({
-          foodCategory: {
-            connectOrCreate: {
-              where: { name: categoryName },
-              create: { name: categoryName },
+        // Then, connect new or existing categories
+        updateData.categories = {
+          create: categoryNames.map((categoryName: string) => ({
+            foodCategory: {
+              connectOrCreate: {
+                where: { name: categoryName },
+                create: { name: categoryName },
+              },
             },
-          },
-        })),
-      };
-    }
+          })),
+        };
+      }
 
-    const updatedFoodItem = await prisma.foodItem.update({
-      where: { id: id },
-      data: updateData,
-      include: {
-        categories: {
-          include: {
-            foodCategory: true,
-          },
-        },
-      },
+      return await tx.foodItem.update({
+        where: { id: id },
+        data: updateData,
+        select: foodItemSelect,
+      });
     });
 
     return NextResponse.json(updatedFoodItem, { status: 200 });
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
-  } finally {
-    await prisma.$disconnect();
   }
 }
 
 export async function DELETE(request: Request) {
   try {
-    const { userId } = await auth() 
-    if (!userId) { 
+    const { userId } = await auth();
+    if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    
     const body: unknown = await request.json();
 
     if (!isValidDeleteBody(body)) {
@@ -272,48 +283,51 @@ export async function DELETE(request: Request) {
 
     const { id } = body;
 
-    // First, get the food item to check if it has an image
-    const existingItem = await prisma.foodItem.findUnique({
-      where: { id },
-      select: { imageUrl: true }
+    // Use transaction for atomic delete operation
+    const result = await prisma.$transaction(async (tx) => {
+      // First, get the food item to check if it has an image
+      const existingItem = await tx.foodItem.findUnique({
+        where: { id },
+        select: { imageUrl: true }
+      });
+
+      if (!existingItem) {
+        throw new Error('Food item not found');
+      }
+
+      // Delete the food item from database first
+      const deletedFoodItem = await tx.foodItem.delete({
+        where: { id: id },
+        select: { id: true }
+      });
+
+      return { deletedFoodItem, imageUrl: existingItem.imageUrl };
     });
 
-    if (!existingItem) {
-      return NextResponse.json({ error: 'Food item not found.' }, { status: 404 });
-    }
-
-    // Delete the file from UploadThing if it exists
-    if (existingItem.imageUrl) {
-      try {
-        const fileKey = extractFileKeyFromUrl(existingItem.imageUrl);
-        if (fileKey) {
-          await utapi.deleteFiles([fileKey]);
-          console.log(`Successfully deleted file with key: ${fileKey}`);
-        }
-      } catch (fileDeleteError) {
-        console.warn('Failed to delete file from UploadThing:', fileDeleteError);
-        // Continue with database deletion even if file deletion fails
-        // This prevents orphaned database records
+    // Delete the file from UploadThing asynchronously (don't wait for it)
+    if (result.imageUrl) {
+      const fileKey = extractFileKeyFromUrl(result.imageUrl);
+      if (fileKey) {
+        // Fire and forget - don't block the response
+        utapi.deleteFiles([fileKey]).catch((error) => {
+          console.warn('Failed to delete file from UploadThing:', error);
+        });
       }
     }
 
-    // Delete the food item from database
-    const deletedFoodItem = await prisma.foodItem.delete({
-      where: { id: id },
-    });
-
-    return NextResponse.json({ 
-      message: 'Food item and associated file deleted successfully.', 
-      deletedId: deletedFoodItem.id 
+    return NextResponse.json({
+      message: 'Food item deleted successfully.',
+      deletedId: result.deletedFoodItem.id
     }, { status: 200 });
 
   } catch (error) {
     console.error('Error deleting food item:', error);
+    if (error instanceof Error && error.message === 'Food item not found') {
+      return NextResponse.json({ error: 'Food item not found.' }, { status: 404 });
+    }
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
       return NextResponse.json({ error: 'Food item not found.' }, { status: 404 });
     }
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
-  } finally {
-    await prisma.$disconnect();
   }
 }
