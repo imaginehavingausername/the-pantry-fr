@@ -16,7 +16,7 @@ interface FoodItemData {
   quantity: number;
   placement: string;
   expirationDate: string;
-  imageUrl?: string;
+  imageUrl: string;
   keywords: string[];
   hidden: boolean;
   categories: {
@@ -156,7 +156,9 @@ export default function Home() {
                 name={item.name}
                 quantity={item.quantity}
                 location={item.placement}
+                imageUrl={item.imageUrl}
                 expires={formatDate(item.expirationDate)}
+                
               />
             </Link>
           ))}

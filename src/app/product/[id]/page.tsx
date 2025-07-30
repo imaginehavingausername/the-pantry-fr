@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
-import { ArrowLeft, Trash2, Upload } from "lucide-react"
+import { ArrowLeft, Trash2, Upload, X } from "lucide-react"
 import { Button } from "~/components/ui/button"
 import { Input } from "~/components/ui/input"
 import { Checkbox } from "~/components/ui/checkbox"
 import { Label } from "~/components/ui/label"
 import { Separator } from "~/components/ui/separator"
 import { toast } from "sonner"
+import { useUploadThing } from "~/lib/uploadthing" // Adjust path as needed
 import {
   AlertDialog,
   AlertDialogAction,
@@ -72,7 +73,32 @@ export default function ProductDetail() {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [keywordsInput, setKeywordsInput] = useState('')
   
+  // Image upload state
+  const [selectedImage, setSelectedImage] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
+  
   const categories = ["Breakfast", "Lunch", "Dinner", "Snack", "Dessert", "Main", "Veggie", "Starch"]
+
+  // UploadThing hook - adjust endpoint name as per your setup
+  const { startUpload } = useUploadThing("imageUploader", {
+    onClientUploadComplete: (res) => {
+      if (res && res[0]) {
+        const uploadedUrl = res[0].url
+        setFormData(prev => ({
+          ...prev,
+          imageUrl: uploadedUrl
+        }))
+        toast("Image uploaded successfully!")
+      }
+      setIsUploading(false)
+    },
+    onUploadError: (error: Error) => {
+      console.error("Upload error:", error)
+      toast("Failed to upload image. Please try again.")
+      setIsUploading(false)
+    },
+  })
 
   // Fetch food item data
   const fetchFoodItem = async () => {
@@ -95,7 +121,7 @@ export default function ProductDetail() {
       setFormData({
         name: data.name,
         quantity: data.quantity,
-        expirationDate: data.expirationDate.split('T')[0], // Format for date inputstring
+        expirationDate: data.expirationDate.split('T')[0], // Format for date input
         placement: data.placement,
         keywords: data.keywords,
         categoryNames: categoryNames,
@@ -104,6 +130,11 @@ export default function ProductDetail() {
       
       setSelectedCategories(categoryNames)
       setKeywordsInput(data.keywords.join(', '))
+      
+      // Set image preview if exists
+      if (data.imageUrl) {
+        setImagePreview(data.imageUrl)
+      }
       
     } catch (error) {
       console.error('Error fetching food item:', error)
@@ -162,6 +193,57 @@ export default function ProductDetail() {
     }))
   }
 
+  // Handle image selection
+  const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast("Please select a valid image file")
+        return
+      }
+      
+      // Validate file size (e.g., max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast("Image size should be less than 5MB")
+        return
+      }
+      
+      setSelectedImage(file)
+      
+      // Create preview
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        setImagePreview(e.target?.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  // Handle image upload
+  const handleImageUpload = async () => {
+    if (!selectedImage) return
+    
+    setIsUploading(true)
+    try {
+      await startUpload([selectedImage])
+    } catch (error) {
+      console.error("Upload error:", error)
+      toast("Failed to upload image. Please try again.")
+      setIsUploading(false)
+    }
+  }
+
+  // Remove image
+  const handleRemoveImage = () => {
+    setSelectedImage(null)
+    setImagePreview(null)
+    setFormData(prev => ({
+      ...prev,
+      imageUrl: ''
+    }))
+  }
+
   // Form validation
   const validateForm = (): string | null => {
     if (!formData.name.trim()) return "Name is required"
@@ -183,6 +265,13 @@ export default function ProductDetail() {
     if (validationError) {
       toast("validation error has occured")
       return
+    }
+
+    // Upload image first if there's a selected image
+    if (selectedImage && !formData.imageUrl) {
+      await handleImageUpload()
+      // Wait a bit for the upload to complete
+      await new Promise(resolve => setTimeout(resolve, 1000))
     }
 
     setIsUpdating(true)
@@ -255,11 +344,6 @@ export default function ProductDetail() {
     }
   }
 
-  // Format date for input
-  const formatDateForInput = (date: Date) => {
-    return date.toISOString().split('T')[0]
-  }
-
   if (loading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
@@ -322,20 +406,69 @@ export default function ProductDetail() {
 
           <div>
             <Label>Image (Optional)</Label>
-            <div className="mt-1 border-2 border-dashed border-gray-300 rounded-md p-6 flex justify-center">
-              <div className="text-center">
-                <div className="mt-1 flex justify-center">
-                  <Button 
+            <div className="mt-1 space-y-4">
+              {/* Image Preview */}
+              {imagePreview && (
+                <div className="relative inline-block">
+                  <img 
+                    src={imagePreview} 
+                    alt="Preview" 
+                    className="w-32 h-32 object-cover rounded-md border"
+                  />
+                  <Button
                     type="button"
-                    variant="outline" 
-                    className="text-sm bg-transparent"
-                    disabled={isUpdating || isDeleting}
+                    variant="ghost"
+                    size="sm"
+                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-red-500 text-white hover:bg-red-600"
+                    onClick={handleRemoveImage}
                   >
-                    <Upload className="h-4 w-4 mr-2" />
-                    Upload Image
+                    <X className="h-3 w-3" />
                   </Button>
                 </div>
-                <p className="text-xs text-gray-500 mt-2">Image upload coming soon</p>
+              )}
+              
+              {/* Upload Area */}
+              <div className="border-2 border-dashed border-gray-300 rounded-md p-6">
+                <div className="text-center">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageSelect}
+                    className="hidden"
+                    id="image-upload"
+                    disabled={isUploading || isUpdating || isDeleting}
+                  />
+                  <div className="flex flex-col items-center space-y-2">
+                    <Label htmlFor="image-upload" className="cursor-pointer">
+                      <Button 
+                        type="button"
+                        variant="outline" 
+                        className="text-sm bg-transparent"
+                        disabled={isUploading || isUpdating || isDeleting}
+                        asChild
+                      >
+                        <span>
+                          <Upload className="h-4 w-4 mr-2" />
+                          {selectedImage ? 'Change Image' : 'Upload Image'}
+                        </span>
+                      </Button>
+                    </Label>
+                    
+                    {selectedImage && !formData.imageUrl && (
+                      <Button
+                        type="button"
+                        onClick={handleImageUpload}
+                        disabled={isUploading}
+                        className="text-sm bg-[#528F04] hover:bg-[#3e6b03]"
+                      >
+                        {isUploading ? 'Uploading...' : 'Upload Selected Image'}
+                      </Button>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    PNG, JPG up to 5MB
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -406,7 +539,7 @@ export default function ProductDetail() {
           <Button 
             type="submit"
             className="w-full bg-[#528F04] hover:bg-[#3e6b03]"
-            disabled={isUpdating || isDeleting}
+            disabled={isUpdating || isDeleting || isUploading}
           >
             {isUpdating ? 'UPDATING...' : 'UPDATE PRODUCT'}
           </Button>

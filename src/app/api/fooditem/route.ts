@@ -3,16 +3,18 @@
 import { NextResponse } from 'next/server';
 import { PrismaClient, Prisma } from '@prisma/client';
 import { auth } from "@clerk/nextjs/server";
+import { UTApi } from "uploadthing/server";
 
 // make a variable which has everything about our db connection
 const prisma = new PrismaClient();
+const utapi = new UTApi();
 
 // Type definitions for request bodies
 interface CreateFoodItemBody {
   name: string;
   expirationDate: string;
   quantity: number;
-  imageUrl?: string;
+  imageUrl?: string | null;
   keywords?: string[];
   placement: string;
   categoryNames?: string[];
@@ -23,7 +25,7 @@ interface UpdateFoodItemBody {
   name?: string;
   expirationDate?: string;
   quantity?: number;
-  imageUrl?: string;
+  imageUrl?: string | null;
   keywords?: string[];
   placement?: string;
   hidden?: boolean;
@@ -32,6 +34,17 @@ interface UpdateFoodItemBody {
 
 interface DeleteFoodItemBody {
   id: string;
+}
+
+// Helper function to extract file key from UploadThing URL
+function extractFileKeyFromUrl(url: string): string | null {
+  try {
+    // UploadThing URLs typically look like: https://utfs.io/f/[FILE_KEY]
+    const match = url.match(/\/f\/([^/?]+)/);
+    return match ? match[1] : null
+  } catch {
+    return null;
+  }
 }
 
 // Helper function to validate request body
@@ -145,7 +158,7 @@ export async function POST(request: Request) {
         name,
         expirationDate: new Date(expirationDate),
         quantity,
-        imageUrl: imageUrl ?? null,
+        imageUrl: imageUrl || null,
         keywords: keywords ?? [],
         placement,
         categories: {
@@ -258,13 +271,43 @@ export async function DELETE(request: Request) {
 
     const { id } = body;
 
+    // First, get the food item to check if it has an image
+    const existingItem = await prisma.foodItem.findUnique({
+      where: { id },
+      select: { imageUrl: true }
+    });
+
+    if (!existingItem) {
+      return NextResponse.json({ error: 'Food item not found.' }, { status: 404 });
+    }
+
+    // Delete the file from UploadThing if it exists
+    if (existingItem.imageUrl) {
+      try {
+        const fileKey = extractFileKeyFromUrl(existingItem.imageUrl);
+        if (fileKey) {
+          await utapi.deleteFiles([fileKey]);
+          console.log(`Successfully deleted file with key: ${fileKey}`);
+        }
+      } catch (fileDeleteError) {
+        console.warn('Failed to delete file from UploadThing:', fileDeleteError);
+        // Continue with database deletion even if file deletion fails
+        // This prevents orphaned database records
+      }
+    }
+
+    // Delete the food item from database
     const deletedFoodItem = await prisma.foodItem.delete({
       where: { id: id },
     });
 
-    return NextResponse.json({ message: 'Food item deleted successfully.', deletedId: deletedFoodItem.id }, { status: 200 });
+    return NextResponse.json({ 
+      message: 'Food item and associated file deleted successfully.', 
+      deletedId: deletedFoodItem.id 
+    }, { status: 200 });
+
   } catch (error) {
-    console.error(error);
+    console.error('Error deleting food item:', error);
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
       return NextResponse.json({ error: 'Food item not found.' }, { status: 404 });
     }
