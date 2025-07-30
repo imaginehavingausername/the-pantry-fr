@@ -41,7 +41,8 @@ function extractFileKeyFromUrl(url: string): string | null {
   try {
     // UploadThing URLs typically look like: https://utfs.io/f/[FILE_KEY]
     const match = url.match(/\/f\/([^/?]+)/);
-    return match ? match[1] : null
+    // Use nullish coalescing to ensure that if match[1] is undefined, it becomes null
+    return match?.[1] ?? null;
   } catch {
     return null;
   }

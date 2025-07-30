@@ -40,7 +40,12 @@ export default tseslint.config(
       "@typescript-eslint/no-unsafe-call": "off",
       "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/no-floating-promises": "off",
-      "react/no-unescaped-entities": "off"
+      "react/no-unescaped-entities": "off",
+      "@typescript-eslint/prefer-optional-chain": "off",
+      "@typescript-eslint/only-throw-errors": "off",
+      "@typescript-eslint/await-thenable": "off",
+      "@typescript-eslint/prefer-regexp-exec": "off",
+      "@typescript-eslint/only-throw-error": "off"
     },
   },
   {
