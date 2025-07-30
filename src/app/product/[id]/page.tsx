@@ -346,44 +346,44 @@ export default function ProductDetail() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <p className="text-gray-500">Loading food item...</p>
+      <div className="min-h-screen bg-white flex items-center justify-center px-4">
+        <p className="text-gray-500 text-sm sm:text-base">Loading food item...</p>
       </div>
     )
   }
 
   if (!foodItem) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <p className="text-red-500">Food item not found</p>
+      <div className="min-h-screen bg-white flex items-center justify-center px-4">
+        <p className="text-red-500 text-sm sm:text-base">Food item not found</p>
       </div>
     )
   }
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="container mx-auto px-4 py-6">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 max-w-2xl">
         <Button
           variant="outline"
-          className="border-[#528F04] text-[#528F04] mb-4 bg-transparent"
+          className="border-[#528F04] text-[#528F04] mb-4 bg-transparent text-sm sm:text-base"
           onClick={handleGoBack}
           disabled={isUpdating || isDeleting}
         >
-          <ArrowLeft className="h-4 w-4 mr-2" />
+          <ArrowLeft className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
           Go back
         </Button>
 
         <Separator className="my-4" />
 
-        <h1 className="text-3xl font-bold mb-6">Edit Food</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6">Edit Food</h1>
 
-        <form className="space-y-6" onSubmit={handleUpdate}>
+        <form className="space-y-4 sm:space-y-6" onSubmit={handleUpdate}>
           <div>
-            <Label htmlFor="name">Name *</Label>
+            <Label htmlFor="name" className="text-sm sm:text-base">Name *</Label>
             <Input 
               id="name" 
               placeholder="Enter name" 
-              className="mt-1"
+              className="mt-1 text-sm sm:text-base"
               value={formData.name}
               onChange={(e) => handleInputChange('name', e.target.value)}
               required
@@ -391,13 +391,13 @@ export default function ProductDetail() {
           </div>
 
           <div>
-            <Label htmlFor="quantity">Quantity *</Label>
+            <Label htmlFor="quantity" className="text-sm sm:text-base">Quantity *</Label>
             <Input 
               id="quantity" 
               type="number"
               min="1"
               placeholder="Enter quantity" 
-              className="mt-1"
+              className="mt-1 text-sm sm:text-base"
               value={formData.quantity}
               onChange={(e) => handleInputChange('quantity', parseInt(e.target.value) || 1)}
               required
@@ -405,30 +405,30 @@ export default function ProductDetail() {
           </div>
 
           <div>
-            <Label>Image (Optional)</Label>
-            <div className="mt-1 space-y-4">
+            <Label className="text-sm sm:text-base">Image (Optional)</Label>
+            <div className="mt-1 space-y-3 sm:space-y-4">
               {/* Image Preview */}
               {imagePreview && (
                 <div className="relative inline-block">
                   <img 
                     src={imagePreview} 
                     alt="Preview" 
-                    className="w-32 h-32 object-cover rounded-md border"
+                    className="w-24 h-24 sm:w-32 sm:h-32 object-cover rounded-md border"
                   />
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-red-500 text-white hover:bg-red-600"
+                    className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 h-5 w-5 sm:h-6 sm:w-6 rounded-full bg-red-500 text-white hover:bg-red-600"
                     onClick={handleRemoveImage}
                   >
-                    <X className="h-3 w-3" />
+                    <X className="h-2 w-2 sm:h-3 sm:w-3" />
                   </Button>
                 </div>
               )}
               
               {/* Upload Area */}
-              <div className="border-2 border-dashed border-gray-300 rounded-md p-6">
+              <div className="border-2 border-dashed border-gray-300 rounded-md p-4 sm:p-6">
                 <div className="text-center">
                   <input
                     type="file"
@@ -443,12 +443,12 @@ export default function ProductDetail() {
                       <Button 
                         type="button"
                         variant="outline" 
-                        className="text-sm bg-transparent"
+                        className="text-xs sm:text-sm bg-transparent px-3 py-2"
                         disabled={isUploading || isUpdating || isDeleting}
                         asChild
                       >
                         <span>
-                          <Upload className="h-4 w-4 mr-2" />
+                          <Upload className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                           {selectedImage ? 'Change Image' : 'Upload Image'}
                         </span>
                       </Button>
@@ -459,7 +459,7 @@ export default function ProductDetail() {
                         type="button"
                         onClick={handleImageUpload}
                         disabled={isUploading}
-                        className="text-sm bg-[#528F04] hover:bg-[#3e6b03]"
+                        className="text-xs sm:text-sm bg-[#528F04] hover:bg-[#3e6b03] px-3 py-2"
                       >
                         {isUploading ? 'Uploading...' : 'Upload Selected Image'}
                       </Button>
@@ -474,11 +474,11 @@ export default function ProductDetail() {
           </div>
 
           <div>
-            <Label htmlFor="expiration">Expiration Date *</Label>
+            <Label htmlFor="expiration" className="text-sm sm:text-base">Expiration Date *</Label>
             <Input 
               id="expiration" 
               type="date"
-              className="mt-1"
+              className="mt-1 text-sm sm:text-base"
               value={formData.expirationDate}
               onChange={(e) => handleInputChange('expirationDate', e.target.value)}
               required
@@ -486,8 +486,8 @@ export default function ProductDetail() {
           </div>
 
           <div>
-            <Label>Categories (Optional)</Label>
-            <div className="grid grid-cols-2 gap-2 mt-1">
+            <Label className="text-sm sm:text-base">Categories (Optional)</Label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3 mt-1">
               {categories.map((category) => (
                 <div key={category} className="flex items-center space-x-2">
                   <Checkbox 
@@ -495,24 +495,30 @@ export default function ProductDetail() {
                     checked={selectedCategories.includes(category)}
                     onCheckedChange={(checked) => handleCategoryChange(category, checked as boolean)}
                     disabled={isUpdating || isDeleting}
+                    className="h-4 w-4"
                   />
-                  <Label htmlFor={`category-${category}`}>{category}</Label>
+                  <Label 
+                    htmlFor={`category-${category}`}
+                    className="text-xs sm:text-sm leading-tight cursor-pointer"
+                  >
+                    {category}
+                  </Label>
                 </div>
               ))}
             </div>
             {selectedCategories.length > 0 && (
-              <p className="text-sm text-gray-600 mt-2">
+              <p className="text-xs sm:text-sm text-gray-600 mt-2">
                 Selected: {selectedCategories.join(', ')}
               </p>
             )}
           </div>
 
           <div>
-            <Label htmlFor="placement">Placement *</Label>
+            <Label htmlFor="placement" className="text-sm sm:text-base">Placement *</Label>
             <Input 
               id="placement" 
               placeholder="e.g., Refrigerator, Pantry, Freezer" 
-              className="mt-1"
+              className="mt-1 text-sm sm:text-base"
               value={formData.placement}
               onChange={(e) => handleInputChange('placement', e.target.value)}
               required
@@ -520,55 +526,62 @@ export default function ProductDetail() {
           </div>
 
           <div>
-            <Label htmlFor="keywords">Keywords (Optional)</Label>
+            <Label htmlFor="keywords" className="text-sm sm:text-base">Keywords (Optional)</Label>
             <Input 
               id="keywords" 
               placeholder="Enter keywords separated by commas (e.g., organic, gluten-free, spicy)" 
-              className="mt-1"
+              className="mt-1 text-sm sm:text-base"
               value={keywordsInput}
               onChange={(e) => handleKeywordsChange(e.target.value)}
               disabled={isUpdating || isDeleting}
             />
             {formData.keywords.length > 0 && (
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="text-xs sm:text-sm text-gray-600 mt-1">
                 Keywords: {formData.keywords.join(', ')}
               </p>
             )}
           </div>
 
-          <Button 
-            type="submit"
-            className="w-full bg-[#528F04] hover:bg-[#3e6b03]"
-            disabled={isUpdating || isDeleting || isUploading}
-          >
-            {isUpdating ? 'UPDATING...' : 'UPDATE PRODUCT'}
-          </Button>
+          <div className="space-y-3 sm:space-y-4 pt-2 sm:pt-4">
+            <Button 
+              type="submit"
+              className="w-full bg-[#528F04] hover:bg-[#3e6b03] text-sm sm:text-base py-2 sm:py-3"
+              disabled={isUpdating || isDeleting || isUploading}
+            >
+              {isUpdating ? 'UPDATING...' : 'UPDATE PRODUCT'}
+            </Button>
 
-          <Button
-            type="button"
-            variant="ghost"
-            className="w-full flex items-center justify-center text-red-500 hover:text-red-700"
-            onClick={() => setShowDeleteDialog(true)}
-            disabled={isUpdating || isDeleting}
-          >
-            <Trash2 className="h-4 w-4 mr-2" />
-            {isDeleting ? 'DELETING...' : 'DELETE PRODUCT'}
-          </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              className="w-full flex items-center justify-center text-red-500 hover:text-red-700 text-sm sm:text-base py-2 sm:py-3 hover:bg-red-50"
+              onClick={() => setShowDeleteDialog(true)}
+              disabled={isUpdating || isDeleting}
+            >
+              <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+              {isDeleting ? 'DELETING...' : 'DELETE PRODUCT'}
+            </Button>
+          </div>
         </form>
 
         <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-          <AlertDialogContent>
+          <AlertDialogContent className="mx-4 max-w-md">
             <AlertDialogHeader>
-              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-              <AlertDialogDescription>
+              <AlertDialogTitle className="text-lg sm:text-xl">Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription className="text-sm sm:text-base">
                 This action cannot be undone. This will permanently delete "{foodItem.name}" from your pantry.
               </AlertDialogDescription>
             </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+              <AlertDialogCancel 
+                disabled={isDeleting}
+                className="w-full sm:w-auto text-sm sm:text-base"
+              >
+                Cancel
+              </AlertDialogCancel>
               <AlertDialogAction 
                 onClick={handleDelete} 
-                className="bg-red-500 hover:bg-red-600"
+                className="w-full sm:w-auto bg-red-500 hover:bg-red-600 text-sm sm:text-base"
                 disabled={isDeleting}
               >
                 {isDeleting ? 'Deleting...' : 'Delete'}
