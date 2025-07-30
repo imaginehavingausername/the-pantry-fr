@@ -242,28 +242,28 @@ export default function AddFood() {
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="container mx-auto px-4 py-6">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 max-w-2xl">
         <Button
           variant="outline"
-          className="border-[#528F04] text-[#528F04] mb-4 bg-transparent"
+          className="border-[#528F04] text-[#528F04] mb-4 bg-transparent text-sm sm:text-base"
           onClick={handleGoBack}
           disabled={isSubmitting}
         >
-          <ArrowLeft className="h-4 w-4 mr-2" />
+          <ArrowLeft className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
           Go back
         </Button>
         
         <Separator className="my-4" />
         
-        <h1 className="text-3xl font-bold mb-6">Add Food</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6">Add Food</h1>
         
-        <form className="space-y-6" onSubmit={handleSubmit}>
+        <form className="space-y-4 sm:space-y-6" onSubmit={handleSubmit}>
           <div>
-            <Label htmlFor="name">Name *</Label>
+            <Label htmlFor="name" className="text-sm sm:text-base">Name *</Label>
             <Input 
               id="name" 
               placeholder="Enter food name" 
-              className="mt-1"
+              className="mt-1 text-sm sm:text-base"
               value={formData.name}
               onChange={(e) => handleInputChange('name', e.target.value)}
               required
@@ -271,13 +271,13 @@ export default function AddFood() {
           </div>
 
           <div>
-            <Label htmlFor="quantity">Quantity *</Label>
+            <Label htmlFor="quantity" className="text-sm sm:text-base">Quantity *</Label>
             <Input 
               id="quantity" 
               type="number" 
               min="1"
               placeholder="Enter quantity" 
-              className="mt-1"
+              className="mt-1 text-sm sm:text-base"
               value={formData.quantity}
               onChange={(e) => handleInputChange('quantity', parseInt(e.target.value) || 1)}
               required
@@ -285,30 +285,30 @@ export default function AddFood() {
           </div>
 
           <div>
-            <Label>Image (Optional)</Label>
-            <div className="mt-1 space-y-4">
+            <Label className="text-sm sm:text-base">Image (Optional)</Label>
+            <div className="mt-1 space-y-3 sm:space-y-4">
               {/* Image Preview */}
               {imagePreview && (
                 <div className="relative inline-block">
                   <img 
                     src={imagePreview} 
                     alt="Preview" 
-                    className="w-32 h-32 object-cover rounded-md border"
+                    className="w-24 h-24 sm:w-32 sm:h-32 object-cover rounded-md border"
                   />
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-red-500 text-white hover:bg-red-600"
+                    className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 h-5 w-5 sm:h-6 sm:w-6 rounded-full bg-red-500 text-white hover:bg-red-600"
                     onClick={handleRemoveImage}
                   >
-                    <X className="h-3 w-3" />
+                    <X className="h-2 w-2 sm:h-3 sm:w-3" />
                   </Button>
                 </div>
               )}
               
               {/* Upload Area */}
-              <div className="border-2 border-dashed border-gray-300 rounded-md p-6">
+              <div className="border-2 border-dashed border-gray-300 rounded-md p-4 sm:p-6">
                 <div className="text-center">
                   <input
                     type="file"
@@ -323,12 +323,12 @@ export default function AddFood() {
                       <Button 
                         type="button"
                         variant="outline" 
-                        className="text-sm bg-transparent"
+                        className="text-xs sm:text-sm bg-transparent px-3 py-2"
                         disabled={isUploading || isSubmitting}
                         asChild
                       >
                         <span>
-                          <Upload className="h-4 w-4 mr-2" />
+                          <Upload className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                           {selectedImage ? 'Change Image' : 'Upload Image'}
                         </span>
                       </Button>
@@ -339,7 +339,7 @@ export default function AddFood() {
                         type="button"
                         onClick={handleImageUpload}
                         disabled={isUploading}
-                        className="text-sm bg-[#528F04] hover:bg-[#3e6b03]"
+                        className="text-xs sm:text-sm bg-[#528F04] hover:bg-[#3e6b03] px-3 py-2"
                       >
                         {isUploading ? 'Uploading...' : 'Upload Selected Image'}
                       </Button>
@@ -354,11 +354,11 @@ export default function AddFood() {
           </div>
 
           <div>
-            <Label htmlFor="expiration">Expiration Date *</Label>
+            <Label htmlFor="expiration" className="text-sm sm:text-base">Expiration Date *</Label>
             <Input 
               id="expiration" 
               type="date"
-              className="mt-1"
+              className="mt-1 text-sm sm:text-base"
               value={formData.expirationDate}
               onChange={(e) => handleInputChange('expirationDate', e.target.value)}
               min={formatDateForInput(new Date())} // Prevent past dates
@@ -367,8 +367,8 @@ export default function AddFood() {
           </div>
 
           <div>
-            <Label>Categories (Optional)</Label>
-            <div className="grid grid-cols-2 gap-2 mt-1">
+            <Label className="text-sm sm:text-base">Categories (Optional)</Label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3 mt-1">
               {categories.map((category) => (
                 <div key={category} className="flex items-center space-x-2">
                   <Checkbox 
@@ -376,24 +376,30 @@ export default function AddFood() {
                     checked={selectedCategories.includes(category)}
                     onCheckedChange={(checked) => handleCategoryChange(category, checked as boolean)}
                     disabled={isSubmitting}
+                    className="h-4 w-4"
                   />
-                  <Label htmlFor={`category-${category}`}>{category}</Label>
+                  <Label 
+                    htmlFor={`category-${category}`}
+                    className="text-xs sm:text-sm leading-tight cursor-pointer"
+                  >
+                    {category}
+                  </Label>
                 </div>
               ))}
             </div>
             {selectedCategories.length > 0 && (
-              <p className="text-sm text-gray-600 mt-2">
+              <p className="text-xs sm:text-sm text-gray-600 mt-2">
                 Selected: {selectedCategories.join(', ')}
               </p>
             )}
           </div>
 
           <div>
-            <Label htmlFor="placement">Placement *</Label>
+            <Label htmlFor="placement" className="text-sm sm:text-base">Placement *</Label>
             <Input 
               id="placement" 
               placeholder="e.g., Refrigerator, Pantry, Freezer" 
-              className="mt-1"
+              className="mt-1 text-sm sm:text-base"
               value={formData.placement}
               onChange={(e) => handleInputChange('placement', e.target.value)}
               required
@@ -401,16 +407,16 @@ export default function AddFood() {
           </div>
 
           <div>
-            <Label htmlFor="keywords">Keywords (Optional)</Label>
+            <Label htmlFor="keywords" className="text-sm sm:text-base">Keywords (Optional)</Label>
             <Input 
               id="keywords" 
               placeholder="Enter keywords separated by commas (e.g., organic, gluten-free, spicy)" 
-              className="mt-1"
+              className="mt-1 text-sm sm:text-base"
               onChange={(e) => handleKeywordsChange(e.target.value)}
               disabled={isSubmitting}
             />
             {formData.keywords.length > 0 && (
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="text-xs sm:text-sm text-gray-600 mt-1">
                 Keywords: {formData.keywords.join(', ')}
               </p>
             )}
@@ -418,7 +424,7 @@ export default function AddFood() {
 
           <Button 
             type="submit" 
-            className="w-full bg-[#528F04] hover:bg-[#3e6b03]"
+            className="w-full bg-[#528F04] hover:bg-[#3e6b03] text-sm sm:text-base py-2 sm:py-3 mt-6 sm:mt-8"
             disabled={isSubmitting || isUploading}
           >
             {isSubmitting ? 'CREATING...' : 'CREATE FOOD'}
