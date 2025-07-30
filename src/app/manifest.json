@@ -1,0 +1,20 @@
+{
+  "name": "the Pantry",
+  "short_name": "the Pantry",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#528F04",
+  "icons": [
+    {
+      "src": "/thePantrylogo.png",
+      "sizes": "2000x2000",
+      "type": "image/png"
+    },
+    {
+      "src": "/thepantry1024x1024.png",
+      "sizes": "1024x1024",
+      "type": "image/png"
+    }
+  ]
+}

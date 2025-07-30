@@ -6,6 +6,8 @@ import { ClerkProvider } from '@clerk/nextjs';
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Toaster } from "~/components/ui/sonner";
 
+<link rel="manifest" href="/manifest.json" />
+
 const geistSans = Geist({
   variable: '--font-geist-sans',
   subsets: ['latin'],
@@ -18,7 +20,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "The Pantry",
-  description: "Track the food in your pantry",
+  description: "track the food in the pantry:)",
 }
 
 export default function RootLayout({

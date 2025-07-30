@@ -147,16 +147,16 @@ export default function Home() {
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-3xl font-bold">the pantry</h1>
           <Link href="/add-food">
-            <Button className="bg-[#528F04] hover:bg-[#3e6b03]">
-              <Plus className="h-5 w-5" />
+            <Button className="flex items-center justify-center bg-[#528F04] hover:bg-[#3e6b03] min-w-[40px] min-h-[40px] max-w-[40px] max-h-[40px]">
+              <span className="h-11.5 font-bold text-4xl">+</span>
             </Button>
           </Link>
         </div>
 
         <div className="relative mb-6">
-          <Search className="absolute left-5.5 top-3 h-4 w-5 text-gray-500" strokeWidth={3} />
+          {/* <Search className="absolute left-5.5 top-3 h-4 w-5 text-gray-500" strokeWidth={3} /> */}
           <Input 
-            className="pl-10 border-gray-300 text-gray-500 placeholder-grey-500 border rounded-full w-full" 
+            className="border-gray-300 text-gray-500 placeholder-grey-500 border rounded-full w-full" 
             placeholder="Search by name or key word"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
