@@ -132,31 +132,30 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-white">
       <header className="sticky top-0 bg-white border-b border-gray-200 z-10">
-        <div className="container mx-6 h-16 flex items-center justify-between shadow-md">
-          <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => setSidebarOpen(true)}>
-            <Menu className="h-6 w-6" />
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between shadow-md">
+          <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-10 sm:w-10" onClick={() => setSidebarOpen(true)}>
+            <Menu className="h-5 w-5 sm:h-6 sm:w-6" />
           </Button>
-          <div className="h-10 w-10 rounded-full bg-[#528F04] flex items-center justify-center">
+          <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-[#528F04] flex items-center justify-center">
             {/* Logo will go here */}
           </div>
-          <div className="w-10"></div> {/* Spacer for alignment */}
+          <div className="w-8 sm:w-10"></div> {/* Spacer for alignment */}
         </div>
       </header>
 
-      <main className="container mx-6 py-6">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold">the pantry</h1>
+      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6 gap-4 sm:gap-0">
+          <h1 className="text-2xl sm:text-3xl font-bold text-center sm:text-left">the pantry</h1>
           <Link href="/add-food">
-            <Button className="flex items-center justify-center bg-[#528F04] hover:bg-[#3e6b03] min-w-[40px] min-h-[40px] max-w-[40px] max-h-[40px]">
-              <span className="h-11.5 font-bold text-4xl">+</span>
+            <Button className="flex items-center justify-center bg-[#528F04] hover:bg-[#3e6b03] w-10 h-10 sm:w-10 sm:h-10 mx-auto sm:mx-0">
+              <span className="font-bold text-2xl sm:text-4xl">+</span>
             </Button>
           </Link>
         </div>
 
-        <div className="relative mb-6">
-          {/* <Search className="absolute left-5.5 top-3 h-4 w-5 text-gray-500" strokeWidth={3} /> */}
-          <Input 
-            className="border-gray-300 text-gray-500 placeholder-grey-500 border rounded-full w-full" 
+        <div className="relative mb-4 sm:mb-6">
+          <Input
+            className="border-gray-300 text-gray-500 placeholder-grey-500 border rounded-full w-full text-sm sm:text-base py-2 sm:py-3"
             placeholder="Search by name or key word"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -164,28 +163,29 @@ export default function Home() {
         </div>
 
         {/* Sorting Dropdown */}
-        <div className="mb-6 flex justify-end">
+        <div className="mb-4 sm:mb-6 flex justify-center sm:justify-end">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="flex items-center gap-2">
-                Sort By
-                {sortOrder === 'name-asc' && <ArrowDownNarrowWide className="h-4 w-4" />}
-                {sortOrder === 'quantity-desc' && <ArrowDownNarrowWide className="h-4 w-4" />}
-                {sortOrder === 'quantity-asc' && <ArrowUpNarrowWide className="h-4 w-4" />}
-                {sortOrder === 'date-new-to-old' && <CalendarDays className="h-4 w-4" />}
+              <Button variant="outline" className="flex items-center gap-2 text-sm sm:text-base px-3 sm:px-4 py-2">
+                <span className="hidden sm:inline">Sort By</span>
+                <span className="sm:hidden">Sort</span>
+                {sortOrder === 'name-asc' && <ArrowDownNarrowWide className="h-3 w-3 sm:h-4 sm:w-4" />}
+                {sortOrder === 'quantity-desc' && <ArrowDownNarrowWide className="h-3 w-3 sm:h-4 sm:w-4" />}
+                {sortOrder === 'quantity-asc' && <ArrowUpNarrowWide className="h-3 w-3 sm:h-4 sm:w-4" />}
+                {sortOrder === 'date-new-to-old' && <CalendarDays className="h-3 w-3 sm:h-4 sm:w-4" />}
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setSortOrder('name-asc')}>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={() => setSortOrder('name-asc')} className="text-sm">
                 Name (A-Z)
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSortOrder('quantity-desc')}>
+              <DropdownMenuItem onClick={() => setSortOrder('quantity-desc')} className="text-sm">
                 Quantity (High to Low)
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSortOrder('quantity-asc')}>
+              <DropdownMenuItem onClick={() => setSortOrder('quantity-asc')} className="text-sm">
                 Quantity (Low to High)
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSortOrder('date-new-to-old')}>
+              <DropdownMenuItem onClick={() => setSortOrder('date-new-to-old')} className="text-sm">
                 Date (New to Old)
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -193,20 +193,20 @@ export default function Home() {
         </div>
         {/* End Sorting Dropdown */}
 
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           {loading && (
             <div className="text-center py-8">
-              <p className="text-gray-500">Loading your food items...</p>
+              <p className="text-gray-500 text-sm sm:text-base">Loading your food items...</p>
             </div>
           )}
 
           {error && (
             <div className="text-center py-8">
-              <p className="text-red-500">Error: {error}</p>
+              <p className="text-red-500 text-sm sm:text-base mb-3">Error: {error}</p>
               <Button 
                 onClick={fetchFoodItems} 
                 variant="outline" 
-                className="mt-2"
+                className="text-sm sm:text-base px-4 py-2"
               >
                 Try Again
               </Button>
@@ -214,8 +214,8 @@ export default function Home() {
           )}
 
           {!loading && !error && filteredAndSortedFoodItems.length === 0 && (
-            <div className="text-center py-8">
-              <p className="text-gray-500">
+            <div className="text-center py-8 px-4">
+              <p className="text-gray-500 text-sm sm:text-base">
                 {searchTerm ? 'No items match your search.' : 'No food items found. Add some items to get started!'}
               </p>
             </div>

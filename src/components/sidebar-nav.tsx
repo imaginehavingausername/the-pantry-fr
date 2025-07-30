@@ -23,10 +23,6 @@ export default function SidebarNav({ username, isOpen, onClose }: SidebarNavProp
             <Home className="h-5 w-5" />
             <span>Home</span>
           </Link>
-          <Link href="/users" className="flex items-center gap-3 p-2 hover:bg-gray-100 rounded-md" onClick={onClose}>
-            <Users className="h-5 w-5" />
-            <span>Users</span>
-          </Link>
           <div className="flex items-center gap-3 p-2 rounded-md ">
             <User className="h-5 w-5" />
             <Link href="/user-profile">
