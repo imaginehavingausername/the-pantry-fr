@@ -9,6 +9,7 @@ import SidebarNav from "~/components/sidebar-nav"
 import { useUser } from "@clerk/nextjs"
 import { redirect } from "next/navigation"
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "~/components/ui/dropdown-menu" // Assuming you have these UI components for dropdowns
+import Image from "next/image"
 
 // Type definition for food item from your API
 interface FoodItemData {
@@ -137,7 +138,7 @@ export default function Home() {
             <Menu className="h-5 w-5 sm:h-6 sm:w-6" />
           </Button>
           <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-[#528F04] flex items-center justify-center">
-            {/* Logo will go here */}
+            <Image src="/thePantrylogo.png" alt="logo" width={40} height={40} />
           </div>
           <div className="w-8 sm:w-10"></div> {/* Spacer for alignment */}
         </div>

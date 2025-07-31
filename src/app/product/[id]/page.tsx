@@ -203,9 +203,9 @@ export default function ProductDetail() {
         return
       }
       
-      // Validate file size (e.g., max 5MB)
+      // Validate file size (e.g., max 4MB)
       if (file.size > 5 * 1024 * 1024) {
-        toast("Image size should be less than 5MB")
+        toast("Image size should be less than 4MB")
         return
       }
       
@@ -395,7 +395,7 @@ export default function ProductDetail() {
             <Input 
               id="quantity" 
               type="number"
-              min="1"
+              // min="1"
               placeholder="Enter quantity" 
               className="mt-1 text-sm sm:text-base"
               value={formData.quantity}
@@ -466,7 +466,7 @@ export default function ProductDetail() {
                     )}
                   </div>
                   <p className="text-xs text-gray-500 mt-2">
-                    PNG, JPG up to 5MB
+                    PNG, JPG up to 4MB
                   </p>
                 </div>
               </div>
