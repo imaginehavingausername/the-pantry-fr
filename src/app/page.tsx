@@ -149,7 +149,7 @@ export default function Home() {
           <h1 className="text-2xl sm:text-3xl font-bold">the pantry</h1>
           <Link href="/add-food">
             <Button className="flex items-center justify-center bg-[#528F04] hover:bg-[#3e6b03] w-10 h-10 sm:w-10 sm:h-10">
-              <span className="h-14 text-3xl sm:text-7xl">+</span>
+              <span className="h-14 text-3xl sm:text-9xl">+</span>
             </Button>
           </Link>
         </div>
