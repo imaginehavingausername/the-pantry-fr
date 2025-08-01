@@ -17,7 +17,7 @@ export default function SidebarNav({ username, isOpen, onClose }: SidebarNavProp
     <div className="fixed inset-0 z-50 flex">
       <div className="fixed inset-0 bg-black/50" onClick={onClose} />
       <div className="relative bg-white w-64 max-w-[80%] h-full shadow-lg flex flex-col p-4">
-        <div className="h-16 w-16 rounded-full bg-[#528F04] mx-auto mb-6 mt-4"><Image src="/thePantrylogo.png" alt="logo" width={70} height={70} /></div>
+        <div className="h-16 w-16 rounded-full bg-[#FFFFFF] mx-auto mb-6 mt-4"><Image src="/thePantrylogo.png" alt="logo" width={70} height={70} /></div>
 
         <nav className="space-y-4">
           <Link href="/" className="flex items-center gap-3 p-2 hover:bg-gray-100 rounded-md" onClick={onClose}>
