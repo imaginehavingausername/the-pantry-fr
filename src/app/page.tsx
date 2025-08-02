@@ -146,7 +146,7 @@ export default function Home() {
 
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
         <div className="flex items-center justify-between mb-4 sm:mb-6">
-          <h1 className="text-6xl sm:text-3xl font-bold">the pantry</h1>
+          <h1 className="text-5xl sm:text-3xl font-bold">the pantry</h1>
           <Link href="/add-food">
             <Button className="flex items-center justify-center bg-[#528F04] hover:bg-[#3e6b03] w-10 h-10 sm:w-10 sm:h-10">
               <span className="h-10 text-3xl sm:text-5xl">+</span>
