@@ -187,8 +187,8 @@ export default function Home() {
                 <DropdownMenuItem onClick={() => setSortOrder('quantity-asc')} className="text-sm">
                   Quantity (Low to High)
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setSortOrder('date-new-to-old')} className="text-sm">
-                  Date (New to Old)
+                <DropdownMenuItem onClick={() => setSortOrder('date-old-to-new')} className="text-sm">
+                  Date (Old to New)
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
