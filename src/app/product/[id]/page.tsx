@@ -248,7 +248,7 @@ export default function ProductDetail() {
   const validateForm = (): string | null => {
     if (!formData.name.trim()) return "Name is required"
     if (!formData.expirationDate) return "Expiration date is required"
-    if (formData.quantity <= 0) return "Quantity must be greater than 0"
+    if (formData.quantity < 0) return "Quantity must be greater than 0"
     if (!formData.placement.trim()) return "Placement is required"
     
     const expDate = new Date(formData.expirationDate)
@@ -399,7 +399,7 @@ export default function ProductDetail() {
               placeholder="Enter quantity" 
               className="mt-1 text-sm sm:text-base"
               value={formData.quantity}
-              onChange={(e) => handleInputChange('quantity', parseInt(e.target.value) || 1)}
+              onChange={(e) => handleInputChange('quantity', parseInt(e.target.value) || 0)}
               required
             />
           </div>
