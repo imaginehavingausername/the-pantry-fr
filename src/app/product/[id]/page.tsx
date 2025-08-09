@@ -405,7 +405,7 @@ export default function ProductDetail() {
           </div>
 
           <div>
-            <Label className="text-sm sm:text-base">Image (Optional)</Label>
+            <Label className="text-sm sm:text-base">Image</Label>
             <div className="mt-1 space-y-3 sm:space-y-4">
               {/* Image Preview */}
               {imagePreview && (
@@ -486,7 +486,7 @@ export default function ProductDetail() {
           </div>
 
           <div>
-            <Label className="text-sm sm:text-base">Categories (Optional)</Label>
+            <Label className="text-sm sm:text-base">Categories</Label>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3 mt-1">
               {categories.map((category) => (
                 <div key={category} className="flex items-center space-x-2">
@@ -526,7 +526,7 @@ export default function ProductDetail() {
           </div>
 
           <div>
-            <Label htmlFor="keywords" className="text-sm sm:text-base">Keywords (Optional)</Label>
+            <Label htmlFor="keywords" className="text-sm sm:text-base">Keywords</Label>
             <Input 
               id="keywords" 
               placeholder="Enter keywords separated by commas (e.g., organic, gluten-free, spicy)" 
