@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import Link from "next/link"
 import { Menu, Plus, Search, ArrowDownNarrowWide, ArrowUpNarrowWide, CalendarDays } from "lucide-react" // Added icons for sorting
 import { Button } from "~/components/ui/button"
@@ -36,6 +36,26 @@ interface FoodItemData {
 // Define possible sort orders
 type SortOrder = 'name-asc' | 'quantity-desc' | 'quantity-asc' | 'date-new-to-old';
 
+// Simple skeleton component for better loading UX
+function LoadingSkeleton() {
+  return (
+    <div className="space-y-3 sm:space-y-4">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div key={i} className="animate-pulse">
+          <div className="flex items-center space-x-4 p-4 border rounded-lg">
+            <div className="h-16 w-16 bg-gray-300 rounded"></div>
+            <div className="flex-1 space-y-2">
+              <div className="h-4 bg-gray-300 rounded w-3/4"></div>
+              <div className="h-3 bg-gray-300 rounded w-1/2"></div>
+              <div className="h-3 bg-gray-300 rounded w-1/4"></div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [foodItems, setFoodItems] = useState<FoodItemData[]>([])
@@ -52,7 +72,7 @@ export default function Home() {
   }
   const pathname = usePathname(); // Get the current pathname
 
-    // Restore scroll position after data has loaded
+  // Restore scroll position after data has loaded
   useEffect(() => {
     // Check for both the loading state and the pathname
     if (!loading) {
@@ -65,13 +85,25 @@ export default function Home() {
     }
   }, [loading, pathname]); // Depend on both loading and pathname
   
-  // Function to fetch all food items
-  const fetchFoodItems = async () => {
+  // OPTIMIZED: Faster fetch with better error handling and timeout
+  const fetchFoodItems = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
       
-      const response = await fetch('/api/fooditem') 
+      // Add timeout to prevent hanging requests
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 8000) // 8 second timeout
+      
+      const response = await fetch('/api/fooditem', {
+        signal: controller.signal,
+        // Add caching headers
+        headers: {
+          'Cache-Control': 'max-age=300', // Cache for 5 minutes
+        },
+      })
+      
+      clearTimeout(timeoutId)
       
       if (!response.ok) {
         throw new Error(`Failed to fetch food items: ${response.status}`)
@@ -84,19 +116,28 @@ export default function Home() {
       setFoodItems(visibleItems)
     } catch (err) {
       console.error('Error fetching food items:', err)
-      setError(err instanceof Error ? err.message : 'Failed to fetch food items')
+      if (err instanceof Error) {
+        if (err.name === 'AbortError') {
+          setError('Request timed out. Please check your connection.')
+        } else {
+          setError(err.message)
+        }
+      } else {
+        setError('Failed to fetch food items')
+      }
     } finally {
       setLoading(false)
     }
-  }
-
-  // Fetch food items on component mount
-  useEffect(() => {
-    fetchFoodItems()
   }, [])
 
-  // Function to sort food items based on the selected sort order
-  const sortFoodItems = (items: FoodItemData[], order: SortOrder): FoodItemData[] => {
+  // OPTIMIZED: Fetch immediately but don't block rendering
+  useEffect(() => {
+    // Use setTimeout to make fetch non-blocking
+    setTimeout(fetchFoodItems, 0)
+  }, [fetchFoodItems])
+
+  // OPTIMIZED: Memoized sorting function
+  const sortFoodItems = useCallback((items: FoodItemData[], order: SortOrder): FoodItemData[] => {
     // Create a shallow copy to avoid modifying the original state directly
     const sortedItems = [...items]; 
 
@@ -118,24 +159,30 @@ export default function Home() {
       default:
         return sortedItems;
     }
-  };
+  }, []);
 
-  // Filter food items based on search term AND then sort them
-  const filteredAndSortedFoodItems = sortFoodItems(
-    foodItems.filter(item => {
-      const searchLower = searchTerm.toLowerCase()
-      return (
+  // OPTIMIZED: Memoized filtering and sorting (only recalculates when dependencies change)
+  const filteredAndSortedFoodItems = useMemo(() => {
+    if (!foodItems.length) return []
+    
+    let filtered = foodItems
+    
+    // Only filter if there's a search term
+    if (searchTerm.trim()) {
+      const searchLower = searchTerm.toLowerCase().trim()
+      filtered = foodItems.filter(item => 
         item.name.toLowerCase().includes(searchLower) ||
         item.keywords.some(keyword => keyword.toLowerCase().includes(searchLower)) ||
         item.placement.toLowerCase().includes(searchLower) ||
         item.categories.some(cat => cat.foodCategory.name.toLowerCase().includes(searchLower))
       )
-    }),
-    sortOrder
-  );
+    }
+    
+    return sortFoodItems(filtered, sortOrder)
+  }, [foodItems, searchTerm, sortOrder, sortFoodItems])
 
-  // Format date for display
-  const formatDate = (dateString: string) => {
+  // OPTIMIZED: Memoized date formatting
+  const formatDate = useCallback((dateString: string) => {
     // Check if dateString is valid to prevent "Invalid Date" errors
     if (!dateString) return "N/A"; 
     try {
@@ -144,7 +191,7 @@ export default function Home() {
       console.error("Error formatting date:", dateString, e);
       return "Invalid Date";
     }
-  }
+  }, [])
 
   return (
     <div className="min-h-screen bg-white">
@@ -213,11 +260,7 @@ export default function Home() {
         </div>
 
         <div className="space-y-3 sm:space-y-4">
-          {loading && (
-            <div className="text-center py-8">
-              <p className="text-gray-500 text-sm sm:text-base">Loading your food items...</p>
-            </div>
-          )}
+          {loading && <LoadingSkeleton />}
 
           {error && (
             <div className="text-center py-8">
