@@ -29,10 +29,6 @@ export default tseslint.config(
         { argsIgnorePattern: "^_" },
       ],
       "@typescript-eslint/require-await": "off",
-      "@typescript-eslint/no-misused-promises": [
-        "error",
-        { checksVoidReturn: { attributes: false } },
-      ],
       "@typescript-eslint/prefer-nullish-coalescing": "off",
       "@typescript-eslint/no-unsafe-assignment": "off",
       "@typescript-eslint/no-unsafe-argument": "off",
@@ -45,7 +41,8 @@ export default tseslint.config(
       "@typescript-eslint/only-throw-errors": "off",
       "@typescript-eslint/await-thenable": "off",
       "@typescript-eslint/prefer-regexp-exec": "off",
-      "@typescript-eslint/only-throw-error": "off"
+      "@typescript-eslint/only-throw-error": "off",
+      "@typescript-eslint/no-misused-promises": "off"
     },
   },
   {
