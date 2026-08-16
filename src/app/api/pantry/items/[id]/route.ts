@@ -14,6 +14,30 @@ if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
  * Authenticated via ALEXA_API_KEY in the Authorization header.
  */
 
+// --- Types ---
+
+interface FormattedPantryItem {
+  id: string;
+  name: string;
+  quantity: number;
+  expiration: string;
+  categories: string[];
+  placement: string;
+  keywords: string[];
+}
+
+interface PrismaFoodItemResult {
+  id: string;
+  name: string;
+  quantity: number;
+  expirationDate: Date;
+  placement: string;
+  keywords: string[] | null;
+  categories: Array<{
+    foodCategory: { name: string };
+  }>;
+}
+
 // --- Helpers ---
 
 function authenticateAlexa(request: Request): boolean {
@@ -22,7 +46,7 @@ function authenticateAlexa(request: Request): boolean {
   if (!apiKey) {
     console.error('ALEXA_API_KEY is not set in environment variables.');
     return false;
-   }
+    }
 
   const authHeader = request.headers.get('Authorization');
   return authHeader === `Bearer ${apiKey}`;
@@ -32,29 +56,13 @@ function unauthenticatedResponse(): NextResponse {
   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 }
 
-function formatItem(item: any): any {
+function formatItem(item: PrismaFoodItemResult): FormattedPantryItem {
   return {
     id: item.id,
     name: item.name,
     quantity: item.quantity,
     expiration: item.expirationDate.toISOString().split('T')[0],
-    categories: item.categories.map((c: any) => c.foodCategory.name),
-    placement: item.placement,
-    keywords: item.keywords || [],
-   };
-}
-
-const foodItemSelect = {
-  id: true,
-  name: true,
-  expirationDate: true,
-  quantity: true,
-  imageUrl: true,
-  keywords: true,
-  placement: true,
-  hidden: true,
-  categories: {
-    select: {
+    categories: item.categories.map((c) => c.foodCategory.name),
       foodCategory: {
         select: {
           id: true,

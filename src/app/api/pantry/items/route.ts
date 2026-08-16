@@ -15,6 +15,30 @@ if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
  * Designed to be called from an Alexa-hosted Lambda (requires public HTTPS).
  */
 
+// --- Types ---
+
+interface FormattedPantryItem {
+  id: string;
+  name: string;
+  quantity: number;
+  expiration: string;
+  categories: string[];
+  placement: string;
+  keywords: string[];
+}
+
+interface PrismaFoodItemResult {
+  id: string;
+  name: string;
+  quantity: number;
+  expirationDate: Date;
+  placement: string;
+  keywords: string[] | null;
+  categories: Array<{
+    foodCategory: { name: string };
+  }>;
+}
+
 // --- Helpers ---
 
 function authenticateAlexa(request: Request): boolean {
@@ -36,16 +60,13 @@ function unauthenticatedResponse(): NextResponse {
 /**
  * Format a food item into the Alexa-friendly response shape.
  */
-function formatItem(item: any): any {
+function formatItem(item: PrismaFoodItemResult): FormattedPantryItem {
   return {
     id: item.id,
     name: item.name,
     quantity: item.quantity,
     expiration: item.expirationDate.toISOString().split('T')[0],
-    categories: item.categories.map((c: any) => c.foodCategory.name),
-    placement: item.placement,
-    keywords: item.keywords || [],
-  };
+    categories: item.categories.map((c) => c.foodCategory.name),
 }
 
 /**
