@@ -70,6 +70,11 @@ export default function Home() {
   if (!user) {
     redirect('/sign-up')
   }
+
+    if (!user.publicMetadata.family ! == true){
+    redirect("/unauthorised")
+  }
+  
   const pathname = usePathname(); // Get the current pathname
 
   // Restore scroll position after data has loaded

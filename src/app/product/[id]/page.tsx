@@ -20,6 +20,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "~/components/ui/alert-dialog"
+import { useUser } from "@clerk/nextjs"
+import { redirect } from "next/navigation"
 
 // Type definitions matching your API
 interface FoodItemData {
@@ -49,6 +51,14 @@ interface UpdateFormData {
 }
 
 export default function ProductDetail() {
+    const { user } = useUser()
+  
+  if (!user) {
+    redirect('/sign-up')
+  }
+  if (!user.publicMetadata.family ! == true){
+    redirect("/unauthorised")
+  }
   const params = useParams()
   const id = params.id as string
   const router = useRouter()
