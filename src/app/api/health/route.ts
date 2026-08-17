@@ -19,7 +19,7 @@ export async function GET() {
     timestamp: string;
     services: Record<string, string>;
    } = {
-    timestamp: new Date().toISOString(),
+    status: 'ok',
     services: {},
   };
 
