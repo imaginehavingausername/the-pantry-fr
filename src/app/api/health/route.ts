@@ -14,8 +14,11 @@ if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
  * Returns the status of the API and database connectivity.
  */
 export async function GET() {
-  const health = {
-    status: 'ok',
+  const health: {
+    status: string;
+    timestamp: string;
+    services: Record<string, string>;
+   } = {
     timestamp: new Date().toISOString(),
     services: {},
   };
