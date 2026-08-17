@@ -18,12 +18,12 @@ export async function GET() {
     status: string;
     timestamp: string;
     services: Record<string, string>;
-   } = {
+  } = {
     status: 'ok',
+    timestamp: new Date().toISOString(),
     services: {},
   };
 
-  // Check database connectivity
   try {
     await prisma.$queryRaw`SELECT 1`;
     health.services.database = 'connected';
