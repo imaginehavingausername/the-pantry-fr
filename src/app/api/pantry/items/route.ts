@@ -65,8 +65,12 @@ function formatItem(item: PrismaFoodItemResult): FormattedPantryItem {
     id: item.id,
     name: item.name,
     quantity: item.quantity,
-    expiration: item.expirationDate.toISOString().split('T')[0],
+    // Provide a fallback empty string to satisfy 'noUncheckedIndexedAccess'
+    expiration: item.expirationDate.toISOString().split('T')[0] || '',
     categories: item.categories.map((c) => c.foodCategory.name),
+    placement: item.placement,
+    keywords: item.keywords || [],
+  };
 }
 
 /**
@@ -148,7 +152,8 @@ export async function GET(request: Request) {
           id: item.id,
           name: item.name,
           quantity: item.quantity,
-          expiration: item.expirationDate.toISOString().split('T')[0],
+          // Fallback included here as well
+          expiration: item.expirationDate.toISOString().split('T')[0] || '',
           categories: item.categories.map((c: any) => c.foodCategory.name),
           placement: item.placement,
           keywords: item.keywords || [],
@@ -168,13 +173,13 @@ export async function GET(request: Request) {
       const matches = items.filter((item) => itemMatchesQuery(item, q));
 
       return NextResponse.json({
-        matches: matches.map((item) => formatItem(item)),
+        matches: matches.map((item) => formatItem(item as unknown as PrismaFoodItemResult)),
       });
     }
 
     // List all items
     return NextResponse.json({
-      items: items.map((item) => formatItem(item)),
+      items: items.map((item) => formatItem(item as unknown as PrismaFoodItemResult)),
     });
   } catch (error) {
     console.error('Error fetching pantry items:', error);
@@ -223,7 +228,7 @@ export async function POST(request: Request) {
       });
     });
 
-    return NextResponse.json({ item: formatItem(newFoodItem) }, { status: 201 });
+    return NextResponse.json({ item: formatItem(newFoodItem as unknown as PrismaFoodItemResult) }, { status: 201 });
   } catch (error) {
     console.error('Error adding pantry item:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

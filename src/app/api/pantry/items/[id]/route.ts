@@ -46,7 +46,7 @@ function authenticateAlexa(request: Request): boolean {
   if (!apiKey) {
     console.error('ALEXA_API_KEY is not set in environment variables.');
     return false;
-    }
+  }
 
   const authHeader = request.headers.get('Authorization');
   return authHeader === `Bearer ${apiKey}`;
@@ -57,23 +57,42 @@ function unauthenticatedResponse(): NextResponse {
 }
 
 function formatItem(item: PrismaFoodItemResult): FormattedPantryItem {
+  const dateString = item.expirationDate ? new Date(item.expirationDate).toISOString() : '';
+  const expiration = dateString.split('T')[0] ?? '';
+
   return {
     id: item.id,
     name: item.name,
     quantity: item.quantity,
-    expiration: item.expirationDate.toISOString().split('T')[0],
+    expiration,
     categories: item.categories.map((c) => c.foodCategory.name),
+    placement: item.placement,
+    keywords: item.keywords || [],
+  };
+}
+
+// Optimized select for full item retrieval
+// FIXED: Added missing closing braces and semicolon here
+const foodItemSelect = {
+  id: true,
+  name: true,
+  expirationDate: true,
+  quantity: true,
+  imageUrl: true,
+  keywords: true,
+  placement: true,
+  hidden: true,
+  categories: {
+    select: {
       foodCategory: {
         select: {
           id: true,
           name: true,
-         },
-       },
-     },
-   },
+        },
+      },
+    },
+  },
 };
-
-// --- Route Handlers ---
 
 /**
  * GET /api/pantry/items/{id} — get a single item by ID
@@ -90,17 +109,17 @@ export async function GET(
     const item = await prisma.foodItem.findUnique({
       where: { id },
       select: foodItemSelect,
-     });
+    });
 
     if (!item) {
       return NextResponse.json({ error: 'Item not found.' }, { status: 404 });
-     }
+    }
 
-    return NextResponse.json({ item: formatItem(item) });
-   } catch (error) {
+    return NextResponse.json({ item: formatItem(item as PrismaFoodItemResult) });
+  } catch (error) {
     console.error('Error fetching pantry item:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
-   }
+  }
 }
 
 /**
@@ -116,11 +135,11 @@ export async function PATCH(
   try {
     const { id } = await params;
 
-     // Verify item exists first
+    // Verify item exists first
     const existing = await prisma.foodItem.findUnique({ where: { id } });
     if (!existing) {
       return NextResponse.json({ error: 'Item not found.' }, { status: 404 });
-     }
+    }
 
     const body = await request.json();
     const { name, quantity, placement, expirationDate, keywords, categoryNames } = body;
@@ -133,39 +152,40 @@ export async function PATCH(
     if (expirationDate !== undefined) updateData.expirationDate = new Date(expirationDate);
     if (keywords !== undefined && Array.isArray(keywords)) updateData.keywords = keywords;
 
-     // Handle category updates via transaction
+    // Handle category updates via transaction
     const updatedItem = await prisma.$transaction(async (tx) => {
       if (categoryNames !== undefined && Array.isArray(categoryNames)) {
-         // Delete existing category associations
+        // Delete existing category associations
         await tx.foodCategoryOnFoodItem.deleteMany({
           where: { foodItemId: id },
-         });
+        });
 
-         // Create new associations
+        // Create new associations
         updateData.categories = {
           create: categoryNames.map((cn: string) => ({
             foodCategory: {
               connectOrCreate: {
                 where: { name: cn },
                 create: { name: cn },
-               },
-             },
-           })),
-         };
-       }
+              },
+            },
+          })),
+        };
+      }
 
       return await tx.foodItem.update({
         where: { id },
         data: updateData,
         select: foodItemSelect,
-       });
-     });
+      });
+    });
 
-    return NextResponse.json({ item: formatItem(updatedItem) });
-   } catch (error) {
+    // Added the type cast here for consistency with TypeScript requirements
+    return NextResponse.json({ item: formatItem(updatedItem as PrismaFoodItemResult) });
+  } catch (error) {
     console.error('Error updating pantry item:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
-   }
+  }
 }
 
 /**
@@ -183,13 +203,13 @@ export async function DELETE(
     const existing = await prisma.foodItem.findUnique({ where: { id } });
     if (!existing) {
       return NextResponse.json({ error: 'Item not found.' }, { status: 404 });
-     }
+    }
 
     await prisma.foodItem.delete({ where: { id } });
 
     return NextResponse.json({ message: 'Item removed successfully.', id }, { status: 200 });
-   } catch (error) {
+  } catch (error) {
     console.error('Error deleting pantry item:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
-   }
+  }
 }
