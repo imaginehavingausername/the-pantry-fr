@@ -77,7 +77,10 @@ function formatItem(item: PrismaFoodItemResult): FormattedPantryItem {
  * Flexible text matching: check if a query string matches an item
  * by name or any of its keywords (case-insensitive).
  */
-function itemMatchesQuery(item: any, query: string): boolean {
+function itemMatchesQuery(
+  item: PrismaFoodItemResult,
+  query: string
+): boolean {
   const q = query.toLowerCase().trim();
   if (!q) return true;
 
@@ -154,7 +157,7 @@ export async function GET(request: Request) {
           quantity: item.quantity,
           // Fallback included here as well
           expiration: item.expirationDate.toISOString().split('T')[0] || '',
-          categories: item.categories.map((c: any) => c.foodCategory.name),
+          categories: item.categories.map((c) => c.foodCategory.name),
           placement: item.placement,
           keywords: item.keywords || [],
         })),
@@ -173,13 +176,13 @@ export async function GET(request: Request) {
       const matches = items.filter((item) => itemMatchesQuery(item, q));
 
       return NextResponse.json({
-        matches: matches.map((item) => formatItem(item as unknown as PrismaFoodItemResult)),
+        matches: matches.map((item) => formatItem(item)),
       });
     }
 
     // List all items
     return NextResponse.json({
-      items: items.map((item) => formatItem(item as unknown as PrismaFoodItemResult)),
+      items: items.map((item) => formatItem(item)),
     });
   } catch (error) {
     console.error('Error fetching pantry items:', error);
@@ -228,7 +231,7 @@ export async function POST(request: Request) {
       });
     });
 
-    return NextResponse.json({ item: formatItem(newFoodItem as unknown as PrismaFoodItemResult) }, { status: 201 });
+    return NextResponse.json({ item: formatItem(newFoodItem) }, { status: 201 });
   } catch (error) {
     console.error('Error adding pantry item:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

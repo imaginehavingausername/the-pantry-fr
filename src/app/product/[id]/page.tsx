@@ -56,8 +56,8 @@ export default function ProductDetail() {
   if (!user) {
     redirect('/sign-up')
   }
-  if (!user.publicMetadata.family ! == true){
-    redirect("/unauthorised")
+  if (user.publicMetadata.family !== true) {
+  redirect("/unauthorised")
   }
   const params = useParams()
   const id = params.id as string

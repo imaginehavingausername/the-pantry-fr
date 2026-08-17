@@ -71,7 +71,7 @@ export default function Home() {
     redirect('/sign-up')
   }
 
-    if (!user.publicMetadata.family ! == true){
+    if (user.publicMetadata.family !== true) {
     redirect("/unauthorised")
   }
   
