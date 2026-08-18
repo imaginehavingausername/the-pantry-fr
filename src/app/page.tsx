@@ -7,11 +7,10 @@ import { Input } from "~/components/ui/input"
 import FoodItem from "~/components/food-item"
 import SidebarNav from "~/components/sidebar-nav"
 import { useUser } from "@clerk/nextjs"
-import { redirect } from "next/navigation"
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "~/components/ui/dropdown-menu" // Assuming you have these UI components for dropdowns
 import Image from "next/image"
 import PersistScrollLink from "~/components/PersistScrollLink"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 
 // Type definition for food item from your API
 interface FoodItemData {
@@ -65,17 +64,25 @@ export default function Home() {
   // New state for sorting order
   const [sortOrder, setSortOrder] = useState<SortOrder>('name-asc') // Default sort by name A-Z
   
-  const { user } = useUser()
-  
-  if (!user) {
-    redirect('/sign-up')
-  }
+  const { isLoaded, user } = useUser()
+  const router = useRouter()
+  const pathname = usePathname(); // Get the current pathname
+  const signInUrl = "https://happy-sculpin-29.accounts.dev/sign-in"
+
+  useEffect(() => {
+    if (!isLoaded) {
+      return
+    }
+
+    if (!user) {
+      window.location.assign(signInUrl)
+      return
+    }
 
     if (user.publicMetadata.family !== true) {
-    redirect("/unauthorised")
-  }
-  
-  const pathname = usePathname(); // Get the current pathname
+      router.replace("/unauthorised")
+    }
+  }, [isLoaded, user, router, signInUrl])
 
   // Restore scroll position after data has loaded
   useEffect(() => {

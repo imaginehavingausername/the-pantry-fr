@@ -21,7 +21,6 @@ import {
   AlertDialogTitle,
 } from "~/components/ui/alert-dialog"
 import { useUser } from "@clerk/nextjs"
-import { redirect } from "next/navigation"
 
 // Type definitions matching your API
 interface FoodItemData {
@@ -51,17 +50,26 @@ interface UpdateFormData {
 }
 
 export default function ProductDetail() {
-    const { user } = useUser()
-  
-  if (!user) {
-    redirect('/sign-up')
-  }
-  if (user.publicMetadata.family !== true) {
-  redirect("/unauthorised")
-  }
+  const { isLoaded, user } = useUser()
   const params = useParams()
   const id = params.id as string
   const router = useRouter()
+  const signInUrl = "https://happy-sculpin-29.accounts.dev/sign-in"
+
+  useEffect(() => {
+    if (!isLoaded) {
+      return
+    }
+
+    if (!user) {
+      window.location.assign(signInUrl)
+      return
+    }
+
+    if (user.publicMetadata.family !== true) {
+      router.replace("/unauthorised")
+    }
+  }, [isLoaded, user, router, signInUrl])
   
   // State management
   const [foodItem, setFoodItem] = useState<FoodItemData | null>(null)
