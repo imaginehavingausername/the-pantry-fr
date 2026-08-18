@@ -11,13 +11,14 @@ interface FoodItemProps {
 export default function FoodItem({ name, imageUrl, quantity, location, expires }: FoodItemProps) {
   return (
     <div className="flex items-start p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
-      <div className="h-25 w-25 bg-gray-100 rounded-md mr-4 flex items-center justify-center">  
-        <Image
+       <div className="h-25 w-25 bg-gray-100 rounded-md mr-4 flex items-center justify-center overflow-hidden">  
+         <Image
           src={imageUrl}
           alt="Food Item"
-          width={1920}
-          height={1080}
-          className="rounded-md"
+          width={96}
+          height={96}
+          sizes="(max-width: 640px) 80px, 96px"
+          className="rounded-md object-cover"
         />
       </div>
       <div>
