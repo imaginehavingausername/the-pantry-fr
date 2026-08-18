@@ -10,10 +10,9 @@ const prisma = globalForPrisma.prisma ?? new PrismaClient();
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
 
 /**
- * GET /api/health — Health check endpoint for the Alexa API.
- * Returns the status of the API and database connectivity.
+ * Shared health-check logic used by GET and HEAD.
  */
-export async function GET() {
+async function checkHealth() {
   const health: {
     status: string;
     timestamp: string;
@@ -33,6 +32,23 @@ export async function GET() {
   }
 
   const statusCode = health.status === 'ok' ? 200 : 503;
+  return { health, statusCode };
+}
 
+/**
+ * GET /api/health — Health check endpoint for the Alexa API.
+ * Returns the status of the API and database connectivity.
+ */
+export async function GET() {
+  const { health, statusCode } = await checkHealth();
   return NextResponse.json(health, { status: statusCode });
+}
+
+/**
+ * HEAD /api/health — Lightweight health check for monitoring services
+ * (UptimeRobot, Pingdom, StatusCake, etc.). Returns headers only.
+ */
+export async function HEAD() {
+  const { statusCode } = await checkHealth();
+  return new NextResponse(null, { status: statusCode });
 }
