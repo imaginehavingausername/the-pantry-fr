@@ -13,6 +13,8 @@ const config = {
                 hostname: "utfs.io",
             },
         ],
+        formats: ['image/avif', 'image/webp'],
+        minimumCacheTTL: 31536000,
     }
 };
 
