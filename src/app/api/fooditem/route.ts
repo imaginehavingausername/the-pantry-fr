@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 import { PrismaClient, Prisma } from '@prisma/client';
 import { auth } from "@clerk/nextjs/server";
 import { UTApi } from "uploadthing/server";
+import { revalidatePath } from 'next/cache';
 
 // Singleton pattern for Prisma Client - prevents connection pool exhaustion
 const globalForPrisma = globalThis as unknown as {
@@ -22,6 +23,9 @@ const globalForUTApi = globalThis as unknown as {
 const utapi = globalForUTApi.utapi ?? new UTApi();
 
 if (process.env.NODE_ENV !== 'production') globalForUTApi.utapi = utapi;
+
+// Cache API responses for 60 seconds (Next.js ISR-like caching)
+export const revalidate = 60;
 
 // Type definitions for request bodies
 interface CreateFoodItemBody {
@@ -134,7 +138,12 @@ export async function GET(request: Request) {
         },
       });
 
-      return NextResponse.json(foodItems, { status: 200 });
+      return NextResponse.json(foodItems, {
+        status: 200,
+        headers: {
+          'cache-control': 'public, max-age=60, stale-while-revalidate=300'
+        }
+      });
     }
 
     // If ID is provided, return the specific food item
@@ -151,7 +160,12 @@ export async function GET(request: Request) {
     }
 
     // return the food item as a json response
-    return NextResponse.json(foodItem, { status: 200 });
+    return NextResponse.json(foodItem, {
+      status: 200,
+      headers: {
+        'cache-control': 'public, max-age=60, stale-while-revalidate=300'
+      }
+    });
 
   } catch (error) {
     console.error('Error fetching food item(s):', error);
@@ -200,6 +214,13 @@ export async function POST(request: Request) {
         select: foodItemSelect,
       });
     });
+
+    // Invalidate cached API response so clients see fresh data
+    try {
+      revalidatePath('/api/fooditem');
+    } catch (e) {
+      console.warn('revalidatePath failed:', e);
+    }
 
     return NextResponse.json(newFoodItem, { status: 201 });
   } catch (error) {
@@ -261,6 +282,12 @@ export async function PUT(request: Request) {
       });
     });
 
+    try {
+      revalidatePath('/api/fooditem');
+    } catch (e) {
+      console.warn('revalidatePath failed:', e);
+    }
+
     return NextResponse.json(updatedFoodItem, { status: 200 });
   } catch (error) {
     console.error(error);
@@ -313,6 +340,12 @@ export async function DELETE(request: Request) {
           console.warn('Failed to delete file from UploadThing:', error);
         });
       }
+    }
+
+    try {
+      revalidatePath('/api/fooditem');
+    } catch (e) {
+      console.warn('revalidatePath failed:', e);
     }
 
     return NextResponse.json({

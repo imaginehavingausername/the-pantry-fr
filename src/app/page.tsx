@@ -223,8 +223,8 @@ export default function Home() {
         <div className="flex items-center justify-between mb-4 sm:mb-6">
           <h1 className="text-4xl sm:text-3xl font-bold">the pantry</h1>
           <Link href="/add-food">
-            <Button className="flex items-center justify-center bg-[#528F04] hover:bg-[#3e6b03] w-10 h-10 sm:w-10 sm:h-10">
-              <span className="h-10 text-3xl sm:text-5xl">+</span>
+            <Button className="flex items-center justify-center bg-[#528F04] hover:bg-[#3e6b03] w-10 h-10 p-0">
+              <span className="text-3xl sm:text-4xl leading-none flex items-center justify-center">+</span>
             </Button>
           </Link>
         </div>
