@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db as prisma } from "~/server/db";
 import {
   getGenAI,
-  RECEIPT_MODEL,
+  RECEIPT_MODELS,
   receiptResponseSchema,
   buildReceiptPrompt,
   type ReceiptScanResult,
@@ -56,19 +56,33 @@ export async function POST(req: NextRequest) {
 
     const prompt = buildReceiptPrompt(pantryItems);
 
-    const response = await getGenAI().models.generateContent({
-      model: RECEIPT_MODEL,
-      contents: [
-        {
-          role: "user",
-          parts: [{ text: prompt }, ...imageParts],
-        },
-      ],
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: receiptResponseSchema,
-      },
-    });
+    let response;
+    let lastError;
+    for (const model of RECEIPT_MODELS) {
+      try {
+        response = await getGenAI().models.generateContent({
+          model,
+          contents: [
+            {
+              role: "user",
+              parts: [{ text: prompt }, ...imageParts],
+            },
+          ],
+          config: {
+            responseMimeType: "application/json",
+            responseSchema: receiptResponseSchema,
+          },
+        });
+        break;
+      } catch (err) {
+        lastError = err;
+        console.warn(`Model ${model} failed, trying next fallback if available:`, err);
+      }
+    }
+
+    if (!response) {
+      throw lastError ?? new Error("All receipt models failed.");
+    }
 
     const rawText = response.text;
     if (!rawText) {

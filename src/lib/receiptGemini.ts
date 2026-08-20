@@ -6,7 +6,13 @@ export function getGenAI() {
   return new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 }
 
-export const RECEIPT_MODEL = "gemini-3.7-flash"; // switch to 3.6 or 3.5 if run out of credits
+export const RECEIPT_MODELS = [
+  "gemini-3.7-flash",
+  "gemini-3.6-flash",
+  "gemini-3.5-flash",
+] as const;
+
+export const RECEIPT_MODEL = RECEIPT_MODELS[0];
 
 // Fixed set of FoodCategory names that exist in the DB. Keep this in sync with
 // whatever rows actually exist in FoodCategory — if you add/rename categories there,
