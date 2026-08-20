@@ -109,24 +109,73 @@ export default function ReceiptReviewPage() {
   async function captureFromCamera() {
     if (!videoRef.current) return;
     const video = videoRef.current;
+    // ensure we have a stream; if not, try to acquire one
+    if (!streamRef.current) {
+      try {
+        const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+        streamRef.current = s;
+        if (videoRef.current) videoRef.current.srcObject = s;
+      } catch (err) {
+        setError("Unable to access camera.");
+        return;
+      }
+    }
     const canvas = document.createElement("canvas");
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob((b) => resolve(b)));
-    if (!blob) return;
-    const file = new File([blob], `scan-${Date.now()}.jpg`, { type: blob.type });
+    // Try ImageCapture API first (better on some mobile devices)
+    let gotBlob: Blob | null = null;
+    try {
+      const track = streamRef.current?.getVideoTracks()?.[0];
+      if (track && (window as any).ImageCapture) {
+        try {
+          const ic = new (window as any).ImageCapture(track);
+          // try takePhoto (may throw on some devices), fallback to grabFrame if available
+          if (ic.takePhoto) {
+            gotBlob = await ic.takePhoto();
+          } else if (ic.grabFrame) {
+            const frame = await ic.grabFrame();
+            const c = document.createElement("canvas");
+            c.width = frame.width;
+            c.height = frame.height;
+            const cx = c.getContext("2d");
+            cx?.drawImage(frame, 0, 0);
+            gotBlob = await new Promise((res) => c.toBlob((b) => res(b as Blob)));
+          }
+        } catch (err) {
+          gotBlob = null;
+        }
+      }
+    } catch (err) {
+      gotBlob = null;
+    }
+
+    // fallback to canvas capture if ImageCapture not available or failed
+    if (!gotBlob) {
+      const canvas = document.createElement("canvas");
+      canvas.width = video.videoWidth || 1280;
+      canvas.height = video.videoHeight || 720;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      gotBlob = await new Promise<Blob | null>((resolve) => canvas.toBlob((b) => resolve(b)));
+      if (!gotBlob) return;
+    }
+
+    const file = new File([gotBlob], `scan-${Date.now()}.jpg`, { type: gotBlob.type || "image/jpeg" });
     const resized = await resizeImage(file);
     // keep captured photos in a session buffer until the user confirms (checkmark)
     setSessionImages((prev) => [...prev, resized]);
     // create a tiny preview thumbnail for feedback
     try {
-      const url = URL.createObjectURL(blob);
+      const url = URL.createObjectURL(gotBlob as Blob);
       if (latestPreview) URL.revokeObjectURL(latestPreview);
       setLatestPreview(url);
     } catch {}
+
     // ensure the video keeps playing after capture — reattach stream and play
     try {
       if (streamRef.current && videoRef.current) {
@@ -466,7 +515,7 @@ export default function ReceiptReviewPage() {
                 <div className="mt-2 grid gap-3">
                   {newItems.map((item, i) => (
                     <div key={i} className="p-3 border rounded-md bg-background">
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
                         <input
                           type="checkbox"
                           checked={item.include}
@@ -489,12 +538,12 @@ export default function ReceiptReviewPage() {
                               setNewItems(copy);
                             }
                           }}
-                          className="flex-1"
+                          className="flex-1 min-w-0"
                         />
                         {item.confidence !== "high" && <div className="text-orange-500 text-xs">{item.confidence}</div>}
                       </div>
 
-                      <div className="mt-3 grid grid-cols-2 gap-3">
+                      <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                           <label className="text-xs text-muted-foreground">Qty</label>
                           <Input
