@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db as prisma } from "~/server/db";
 import {
-  getGenAI,
-  RECEIPT_MODELS,
   receiptResponseSchema,
   buildReceiptPrompt,
+  generateWithFallback,
+  ReceiptGenerationError,
   type ReceiptScanResult,
-} from "~/lib/receiptGemini"; // resolves to src/lib/receiptGemini.ts if your tsconfig maps @/* -> src/*
+} from "~/lib/receiptGemini";
 
 export const runtime = "nodejs"; // Gemini SDK needs Node runtime, not edge
-export const maxDuration = 30; // seconds; well under Gemini's typical response time, adjust if needed
+export const maxDuration = 60; // seconds; Hobby's standard ceiling without opting into extended/Fluid limits
 
 const MAX_IMAGES = 5;
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024; // 4MB/image sanity cap, keeps total request well under Vercel's body limit
@@ -57,32 +57,37 @@ export async function POST(req: NextRequest) {
     const prompt = buildReceiptPrompt(pantryItems);
 
     let response;
-    let lastError;
-    for (const model of RECEIPT_MODELS) {
-      try {
-        response = await getGenAI().models.generateContent({
-          model,
-          contents: [
-            {
-              role: "user",
-              parts: [{ text: prompt }, ...imageParts],
-            },
-          ],
-          config: {
-            responseMimeType: "application/json",
-            responseSchema: receiptResponseSchema,
+    let modelUsed: string | undefined;
+    try {
+      ({ response, modelUsed } = await generateWithFallback({
+        contents: [
+          {
+            role: "user",
+            parts: [{ text: prompt }, ...imageParts],
           },
-        });
-        break;
-      } catch (err) {
-        lastError = err;
-        console.warn(`Model ${model} failed, trying next fallback if available:`, err);
+        ],
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: receiptResponseSchema,
+        },
+        // perAttemptTimeoutMs and totalBudgetMs defaults in receiptGemini provide
+        // sensible timeouts; adjust here if needed.
+      }));
+    } catch (err) {
+      if (err instanceof ReceiptGenerationError) {
+        console.error("All Gemini models failed:", err.attempts);
+        return NextResponse.json(
+          {
+            error: "All available models are currently unavailable or overloaded. Please try again in a minute.",
+            attempts: err.attempts,
+          },
+          { status: 503 }
+        );
       }
+      throw err;
     }
 
-    if (!response) {
-      throw lastError ?? new Error("All receipt models failed.");
-    }
+    console.log(`Receipt scan succeeded using ${modelUsed}`);
 
     const rawText = response.text;
     if (!rawText) {

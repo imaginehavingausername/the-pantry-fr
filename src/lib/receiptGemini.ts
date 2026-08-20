@@ -129,6 +129,85 @@ export const receiptResponseSchema = {
   required: ["matched_items", "new_items", "unmatched_lines"],
 };
 
+// ---- Fallback across RECEIPT_MODELS with a hard per-attempt timeout and an ----
+// ---- overall time budget, so sequential retries can never exceed the ----
+// ---- Vercel function's maxDuration and leave it to be killed mid-request. ----
+
+interface GenerateWithFallbackArgs {
+  contents: Parameters<ReturnType<typeof getGenAI>["models"]["generateContent"]>[0]["contents"];
+  config: Parameters<ReturnType<typeof getGenAI>["models"]["generateContent"]>[0]["config"];
+  models?: readonly string[];
+  perAttemptTimeoutMs?: number; // hard cap per model attempt
+  totalBudgetMs?: number; // stop trying new models once this much time has elapsed
+}
+
+export interface FallbackAttemptError {
+  model: string;
+  message: string;
+}
+
+export class ReceiptGenerationError extends Error {
+  attempts: FallbackAttemptError[];
+  constructor(attempts: FallbackAttemptError[]) {
+    super(`All Gemini models failed: ${attempts.map((a) => `${a.model} (${a.message})`).join("; ")}`);
+    this.attempts = attempts;
+  }
+}
+
+export async function generateWithFallback({
+  contents,
+  config,
+  models = RECEIPT_MODELS,
+  perAttemptTimeoutMs = 15_000,
+  totalBudgetMs = 45_000, // leave headroom under a 60s maxDuration for response parsing/DB reads
+}: GenerateWithFallbackArgs) {
+  const genAI = getGenAI();
+  const attempts: FallbackAttemptError[] = [];
+  const start = Date.now();
+
+  for (const model of models) {
+    const elapsed = Date.now() - start;
+    const remaining = totalBudgetMs - elapsed;
+
+    // Not enough budget left for this attempt to plausibly succeed — stop instead of
+    // starting a call that will just get killed by the platform anyway.
+    if (remaining < 3_000) {
+      attempts.push({ model, message: "skipped — out of time budget" });
+      break;
+    }
+
+    const attemptTimeout = Math.min(perAttemptTimeoutMs, remaining);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), attemptTimeout);
+
+    try {
+      const response = await genAI.models.generateContent({
+        model,
+        contents,
+        config,
+        // AbortSignal support depends on the SDK version's request config passthrough —
+        // if your installed version doesn't accept this at the top level, move it under
+        // `config: { abortSignal: controller.signal }` per the SDK's current types.
+        abortSignal: controller.signal,
+      } as Parameters<typeof genAI.models.generateContent>[0]);
+      clearTimeout(timer);
+      return { response, modelUsed: model, attempts };
+    } catch (err) {
+      clearTimeout(timer);
+      const message =
+        controller.signal.aborted
+          ? `timed out after ${attemptTimeout}ms`
+          : err instanceof Error
+            ? err.message
+            : String(err);
+      attempts.push({ model, message });
+      // fall through to the next model
+    }
+  }
+
+  throw new ReceiptGenerationError(attempts);
+}
+
 export function buildReceiptPrompt(pantryItems: { id: string; name: string; keywords: string[] }[]) {
   return `You are parsing a grocery store receipt (one or more photos of the same receipt) to update a home pantry-tracking database.
 

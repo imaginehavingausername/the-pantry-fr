@@ -245,6 +245,16 @@ export default function ReceiptReviewPage() {
       images.forEach((img) => formData.append("images", img));
 
       const res = await fetch("/api/receipt/scan", { method: "POST", body: formData });
+
+      const contentType = res.headers.get("content-type") ?? "";
+      if (!contentType.includes("application/json")) {
+        // Not JSON at all — almost always a platform-level error page (timeout, 502, etc.)
+        // rather than anything our own API route returned.
+        throw new Error(
+          `Scan failed (server returned a non-JSON ${res.status} response). Try again in a minute.`
+        );
+      }
+
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Scan failed.");
 
@@ -387,11 +397,11 @@ export default function ReceiptReviewPage() {
           )}
 
           {cameraOpen && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 overflow-auto">
               <div className="bg-card rounded-lg overflow-hidden w-full max-w-md">
                 <div className="relative">
-                  <div className="aspect-[9/16] bg-black">
-                    <video ref={videoRef} className="w-full h-full object-cover" playsInline autoPlay muted />
+                  <div className="aspect-[9/16] md:aspect-auto md:max-h-[80vh] bg-black">
+                    <video ref={videoRef} className="w-full h-full object-contain" playsInline autoPlay muted />
                   </div>
 
                   <button
