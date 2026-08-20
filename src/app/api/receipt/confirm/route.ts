@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db as prisma } from "~/server/db";
-import { FOOD_CATEGORIES, FoodCategoryName } from "~/lib/receiptGemini";
+import { FOOD_CATEGORIES, type FoodCategoryName } from "~/lib/receiptGemini";
 
 export const runtime = "nodejs";
 

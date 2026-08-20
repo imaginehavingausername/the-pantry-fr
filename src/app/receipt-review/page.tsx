@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { UploadButton } from "~/lib/uploadthing"; // adjust to wherever your app exports these — see README
-import { FOOD_CATEGORIES, FoodCategoryName } from "~/lib/receiptGemini";
+import { FOOD_CATEGORIES, type FoodCategoryName } from "~/lib/receiptGemini";
 import { Button } from "~/components/ui/button";
 import {
   Card,
@@ -55,7 +55,7 @@ async function resizeImage(file: File, maxDimension = 1800, quality = 0.82): Pro
   ctx.drawImage(bitmap, 0, 0, width, height);
 
   const blob: Blob = await new Promise((resolve) =>
-    canvas.toBlob((b) => resolve(b as Blob), "image/jpeg", quality)
+    canvas.toBlob((b) => resolve(b!), "image/jpeg", quality)
   );
   return new File([blob], file.name.replace(/\.\w+$/, ".jpg"), { type: "image/jpeg" });
 }
@@ -119,7 +119,6 @@ export default function ReceiptReviewPage() {
     if (videoRef.current) {
       try {
         videoRef.current.pause();
-        // @ts-ignore
         videoRef.current.srcObject = null;
       } catch {}
     }
@@ -167,8 +166,10 @@ export default function ReceiptReviewPage() {
 
   function toggleCategory(index: number, category: FoodCategoryName) {
     const copy = [...newItems];
-    const current = copy[index].categories;
-    copy[index].categories = current.includes(category)
+    const target = copy[index];
+    if (!target) return;
+    const current = target.categories;
+    target.categories = current.includes(category)
       ? current.filter((c) => c !== category)
       : [...current, category];
     setNewItems(copy);
@@ -300,8 +301,11 @@ export default function ReceiptReviewPage() {
                           checked={item.include}
                           onChange={(e) => {
                             const copy = [...matchedItems];
-                            copy[i].include = e.target.checked;
-                            setMatchedItems(copy);
+                            const target = copy[i];
+                            if (target) {
+                              target.include = e.target.checked;
+                              setMatchedItems(copy);
+                            }
                           }}
                         />
                         <div>
@@ -316,8 +320,11 @@ export default function ReceiptReviewPage() {
                           value={String(item.quantity_delta)}
                           onChange={(e) => {
                             const copy = [...matchedItems];
-                            copy[i].quantity_delta = Number(e.target.value);
-                            setMatchedItems(copy);
+                            const target = copy[i];
+                            if (target) {
+                              target.quantity_delta = Number(e.target.value);
+                              setMatchedItems(copy);
+                            }
                           }}
                           className="w-20"
                         />
@@ -338,16 +345,22 @@ export default function ReceiptReviewPage() {
                           checked={item.include}
                           onChange={(e) => {
                             const copy = [...newItems];
-                            copy[i].include = e.target.checked;
-                            setNewItems(copy);
+                            const target = copy[i];
+                            if (target) {
+                              target.include = e.target.checked;
+                              setNewItems(copy);
+                            }
                           }}
                         />
                         <Input
                           value={item.name}
                           onChange={(e) => {
                             const copy = [...newItems];
-                            copy[i].name = e.target.value;
-                            setNewItems(copy);
+                            const target = copy[i];
+                            if (target) {
+                              target.name = e.target.value;
+                              setNewItems(copy);
+                            }
                           }}
                           className="flex-1"
                         />
@@ -362,8 +375,11 @@ export default function ReceiptReviewPage() {
                             value={String(item.quantity)}
                             onChange={(e) => {
                               const copy = [...newItems];
-                              copy[i].quantity = Number(e.target.value);
-                              setNewItems(copy);
+                              const target = copy[i];
+                              if (target) {
+                                target.quantity = Number(e.target.value);
+                                setNewItems(copy);
+                              }
                             }}
                           />
                         </div>
@@ -375,8 +391,11 @@ export default function ReceiptReviewPage() {
                             value={item.expirationDate}
                             onChange={(e) => {
                               const copy = [...newItems];
-                              copy[i].expirationDate = e.target.value;
-                              setNewItems(copy);
+                              const target = copy[i];
+                              if (target) {
+                                target.expirationDate = e.target.value;
+                                setNewItems(copy);
+                              }
                             }}
                             className={item.include && !item.expirationDate ? "border-destructive" : undefined}
                           />
@@ -389,8 +408,11 @@ export default function ReceiptReviewPage() {
                           value={item.placement}
                           onChange={(e) => {
                             const copy = [...newItems];
-                            copy[i].placement = e.target.value;
-                            setNewItems(copy);
+                            const target = copy[i];
+                            if (target) {
+                              target.placement = e.target.value;
+                              setNewItems(copy);
+                            }
                           }}
                           className={item.include && !item.placement ? "border-destructive" : undefined}
                         />
@@ -418,8 +440,11 @@ export default function ReceiptReviewPage() {
                           value={item.keywords}
                           onChange={(e) => {
                             const copy = [...newItems];
-                            copy[i].keywords = e.target.value;
-                            setNewItems(copy);
+                            const target = copy[i];
+                            if (target) {
+                              target.keywords = e.target.value;
+                              setNewItems(copy);
+                            }
                           }}
                         />
                       </div>
@@ -435,8 +460,11 @@ export default function ReceiptReviewPage() {
                               const url = res?.[0]?.url;
                               if (!url) return;
                               const copy = [...newItems];
-                              copy[i].imageUrl = url;
-                              setNewItems(copy);
+                              const target = copy[i];
+                              if (target) {
+                                target.imageUrl = url;
+                                setNewItems(copy);
+                              }
                             }}
                             onUploadError={(err: Error) => {
                               setError(`Image upload failed for "${item.name}": ${err.message}`);

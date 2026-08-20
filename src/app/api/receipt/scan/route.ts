@@ -5,7 +5,7 @@ import {
   RECEIPT_MODEL,
   receiptResponseSchema,
   buildReceiptPrompt,
-  ReceiptScanResult,
+  type ReceiptScanResult,
 } from "~/lib/receiptGemini"; // resolves to src/lib/receiptGemini.ts if your tsconfig maps @/* -> src/*
 
 export const runtime = "nodejs"; // Gemini SDK needs Node runtime, not edge
