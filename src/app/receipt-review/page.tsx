@@ -169,7 +169,6 @@ export default function ReceiptReviewPage() {
     if (videoRef.current) {
       try {
         videoRef.current.pause();
-        // @ts-ignore
         videoRef.current.srcObject = null;
       } catch {}
     }
