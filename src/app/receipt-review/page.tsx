@@ -513,10 +513,10 @@ export default function ReceiptReviewPage() {
 
               <div>
                 <h3 className="text-sm font-medium">New Items ({newItems.length})</h3>
-                <div className="mt-2 grid gap-3">
+                <div className="mt-2 grid gap-3 w-full max-w-full overflow-hidden">
                   {newItems.map((item, i) => (
-                    <div key={i} className="p-3 border rounded-md bg-background">
-                      <div className="flex items-center gap-3 min-w-0">
+                    <div key={i} className="p-3 border rounded-md bg-background w-full min-w-0 box-border overflow-hidden">
+                      <div className="flex items-center gap-3 w-full min-w-0">
                         <input
                           type="checkbox"
                           checked={item.include}
@@ -539,9 +539,9 @@ export default function ReceiptReviewPage() {
                               setNewItems(copy);
                             }
                           }}
-                          className="flex-1 min-w-0"
+                          className="flex-1 min-w-0 w-full"
                         />
-                        {item.confidence !== "high" && <div className="text-orange-500 text-xs">{item.confidence}</div>}
+                        {item.confidence !== "high" && <div className="text-orange-500 text-xs shrink-0">{item.confidence}</div>}
                       </div>
 
                       <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
