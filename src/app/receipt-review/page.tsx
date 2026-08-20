@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { UploadButton } from "~/lib/uploadthing"; // adjust to wherever your app exports these — see README
 import { FOOD_CATEGORIES, type FoodCategoryName } from "~/lib/receiptGemini";
 import { Button } from "~/components/ui/button";
@@ -75,6 +75,9 @@ export default function ReceiptReviewPage() {
   const [cameraOpen, setCameraOpen] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [latestPreview, setLatestPreview] = useState<string | null>(null);
+  const [sessionImages, setSessionImages] = useState<File[]>([]);
 
   async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
@@ -84,16 +87,22 @@ export default function ReceiptReviewPage() {
 
   async function openCamera() {
     setError(null);
+    // open the modal first so the video element mounts
+    setCameraOpen(true);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
       streamRef.current = stream;
+      // wait a tick for the video element to mount
+      await new Promise((r) => setTimeout(r, 60));
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        // mute so autoplay isn't blocked
+        videoRef.current.muted = true;
         await videoRef.current.play();
       }
-      setCameraOpen(true);
     } catch (err) {
       setError("Unable to access camera.");
+      setCameraOpen(false);
     }
   }
 
@@ -110,21 +119,74 @@ export default function ReceiptReviewPage() {
     if (!blob) return;
     const file = new File([blob], `scan-${Date.now()}.jpg`, { type: blob.type });
     const resized = await resizeImage(file);
-    setImages((prev) => [...prev, resized]);
-    closeCamera();
+    // keep captured photos in a session buffer until the user confirms (checkmark)
+    setSessionImages((prev) => [...prev, resized]);
+    // create a tiny preview thumbnail for feedback
+    try {
+      const url = URL.createObjectURL(blob);
+      if (latestPreview) URL.revokeObjectURL(latestPreview);
+      setLatestPreview(url);
+    } catch {}
+    // ensure the video keeps playing after capture — reattach stream and play
+    try {
+      if (streamRef.current && videoRef.current) {
+        videoRef.current.srcObject = streamRef.current;
+        videoRef.current.muted = true;
+        await videoRef.current.play();
+      }
+    } catch {}
+
+    // verify stream is still live; if not, try to reacquire camera silently
+    try {
+      const tracks = streamRef.current?.getTracks() ?? [];
+      const anyLive = tracks.some((t) => t.readyState === "live");
+      if (!anyLive) {
+        try {
+          const newStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+          streamRef.current = newStream;
+          if (videoRef.current) {
+            videoRef.current.srcObject = newStream;
+            videoRef.current.muted = true;
+            await videoRef.current.play();
+          }
+        } catch (err) {
+          // ignore — user can reopen camera
+        }
+      }
+    } catch {}
   }
 
   function closeCamera() {
+    // discard any session-captured images (Close = cancel)
+    setSessionImages([]);
+    if (latestPreview) {
+      try {
+        URL.revokeObjectURL(latestPreview);
+      } catch {}
+      setLatestPreview(null);
+    }
     setCameraOpen(false);
     if (videoRef.current) {
       try {
         videoRef.current.pause();
+        // @ts-ignore
         videoRef.current.srcObject = null;
       } catch {}
     }
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
   }
+
+  useEffect(() => {
+    return () => {
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      if (latestPreview) {
+        try {
+          URL.revokeObjectURL(latestPreview);
+        } catch {}
+      }
+    };
+  }, [latestPreview]);
 
   async function handleScan() {
     setScanning(true);
@@ -224,25 +286,39 @@ export default function ReceiptReviewPage() {
           {doneMessage && <div className="text-green-600 mb-2">{doneMessage}</div>}
 
           {!scanned && (
-            <div className="flex flex-col gap-4">
-              <div className="flex gap-2 items-center">
+            <div className="flex flex-col items-center gap-6 py-6">
+              <div className="text-center">
+                <div className="mx-auto mb-2 h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <svg className="h-6 w-6 text-primary-foreground" viewBox="0 0 24 24" fill="none">
+                    <path d="M3 7h18M7 3h10l1 4H6l1-4zM5 21h14a1 1 0 001-1V9H4v11a1 1 0 001 1z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </div>
+                <div className="text-lg font-semibold">Scan your receipt</div>
+                <div className="text-sm text-muted-foreground">Use your phone camera or choose files from your device.</div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center gap-3">
                 <Button variant="outline" onClick={openCamera} disabled={scanning}>
                   Open Camera
                 </Button>
-                <label className="text-sm text-muted-foreground">or</label>
-                <div>
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    multiple
-                    onChange={handleFileSelect}
-                  />
-                  <div className="text-xs text-muted-foreground mt-1">Use file input on desktop</div>
-                </div>
+
+                <div className="text-sm text-muted-foreground hidden sm:block">or</div>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  multiple
+                  className="hidden"
+                  onChange={handleFileSelect}
+                />
+                <Button variant="ghost" onClick={() => fileInputRef.current?.click()}>
+                  Choose files
+                </Button>
               </div>
 
-              <div className="flex items-center justify-between">
+              <div className="w-full flex items-center justify-between">
                 <div className="text-sm text-muted-foreground">{images.length} image(s) selected</div>
                 <Button onClick={handleScan} disabled={images.length === 0 || scanning}>
                   {scanning ? (
@@ -265,8 +341,8 @@ export default function ReceiptReviewPage() {
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
               <div className="bg-card rounded-lg overflow-hidden w-full max-w-md">
                 <div className="relative">
-                  <div className="aspect-[3/4] bg-black">
-                    <video ref={videoRef} className="w-full h-full object-cover" playsInline />
+                  <div className="aspect-[9/16] bg-black">
+                    <video ref={videoRef} className="w-full h-full object-cover" playsInline autoPlay muted />
                   </div>
 
                   <button
@@ -276,12 +352,64 @@ export default function ReceiptReviewPage() {
                     Close
                   </button>
 
-                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2">
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-4">
+                    {/* left: thumbnail preview if available */}
+                    <div className="relative">
+                      {latestPreview ? (
+                        <img src={latestPreview} alt="preview" className="w-12 h-16 object-cover rounded" />
+                      ) : (
+                        <div className="w-12 h-16 bg-black/40 rounded border border-border" />
+                      )}
+                      {sessionImages.length > 1 && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="bg-black/60 text-white text-xs font-semibold px-2 py-0.5 rounded">
+                            {sessionImages.length}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* capture button: white circle with red inner dot */}
                     <button
                       onClick={captureFromCamera}
-                      className="bg-primary text-primary-foreground rounded-full w-16 h-16 flex items-center justify-center shadow-lg"
+                      className="bg-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg border"
                       aria-label="Capture"
-                    />
+                    >
+                      <span className="w-3.5 h-3.5 bg-red-600 rounded-full shadow-inner" />
+                    </button>
+
+                    {/* right: small check indicator when at least one session image captured; clicking commits them */}
+                    <div className="w-8 h-8 flex items-center justify-center">
+                      {sessionImages.length > 0 ? (
+                        <button
+                          onClick={() => {
+                              // commit session images into main images list
+                              setImages((prev) => [...prev, ...sessionImages]);
+                              setSessionImages([]);
+                              if (latestPreview) {
+                                try {
+                                  URL.revokeObjectURL(latestPreview);
+                                } catch {}
+                                setLatestPreview(null);
+                              }
+                              // close the camera modal after committing
+                              closeCamera();
+                            }}
+                          className="w-6 h-6 bg-emerald-600 text-white rounded-full flex items-center justify-center"
+                          aria-label="Add photos"
+                        >
+                          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none">
+                            <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </button>
+                      ) : (
+                        <div className="w-6 h-6 bg-transparent rounded-full border border-border" />
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="absolute left-1/2 -translate-x-1/2 bottom-[-2.25rem]">
+                    <div className="text-xs text-muted-foreground">Tip: Take multiple photos if needed to ensure legible text.</div>
                   </div>
                 </div>
               </div>
@@ -499,24 +627,26 @@ export default function ReceiptReviewPage() {
           )}
         </CardContent>
         <CardFooter className="justify-end">
-          <Button
-            onClick={handleConfirm}
-            disabled={confirming || newItemsMissingRequiredFields}
-            variant="default"
-            className="bg-emerald-600 hover:bg-emerald-700"
-          >
-            {confirming ? (
-              <span className="flex items-center gap-2">
-                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" className="opacity-25" />
-                  <path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="4" strokeLinecap="round" className="opacity-75" />
-                </svg>
-                Saving…
-              </span>
-            ) : (
-              "Confirm & Update Pantry"
-            )}
-          </Button>
+          {scanned && (matchedItems.some((m) => m.include) || newItems.some((n) => n.include)) && (
+            <Button
+              onClick={handleConfirm}
+              disabled={confirming || newItemsMissingRequiredFields}
+              variant="default"
+              style={{ backgroundColor: "#528f04", borderColor: "#528f04" }}
+            >
+              {confirming ? (
+                <span className="flex items-center gap-2">
+                  <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" className="opacity-25" />
+                    <path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="4" strokeLinecap="round" className="opacity-75" />
+                  </svg>
+                  Saving…
+                </span>
+              ) : (
+                "Confirm & Update Pantry"
+              )}
+            </Button>
+          )}
         </CardFooter>
       </Card>
     </div>
