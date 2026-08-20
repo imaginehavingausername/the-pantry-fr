@@ -1,12 +1,11 @@
 "use client"
-import Link from "next/link"
-import { Menu } from "lucide-react"
 import { Button } from "~/components/ui/button"
 import SidebarNav from "~/components/sidebar-nav"
 import { useState } from "react"
 import Image from "next/image"
 import { useUser } from "@clerk/nextjs"
 import { redirect } from "next/navigation"
+import { Menu } from "lucide-react"
 
 export default function UnauthorizedPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false)

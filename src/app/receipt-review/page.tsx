@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect } from "react";
+import Image from "next/image";
 import { UploadButton } from "~/lib/uploadthing"; // adjust to wherever your app exports these — see README
 import { FOOD_CATEGORIES, type FoodCategoryName } from "~/lib/receiptGemini";
 import { Button } from "~/components/ui/button";
@@ -100,7 +101,7 @@ export default function ReceiptReviewPage() {
         videoRef.current.muted = true;
         await videoRef.current.play();
       }
-    } catch (err) {
+    } catch {
       setError("Unable to access camera.");
       setCameraOpen(false);
     }
@@ -143,13 +144,13 @@ export default function ReceiptReviewPage() {
             c.height = frame.height;
             const cx = c.getContext("2d");
             cx?.drawImage(frame, 0, 0);
-            gotBlob = await new Promise((res) => c.toBlob((b) => res(b as Blob)));
+            gotBlob = await new Promise((res) => c.toBlob((b) => b && res(b)));
           }
-        } catch (err) {
+        } catch {
           gotBlob = null;
         }
       }
-    } catch (err) {
+    } catch {
       gotBlob = null;
     }
 
@@ -171,7 +172,7 @@ export default function ReceiptReviewPage() {
     setSessionImages((prev) => [...prev, resized]);
     // create a tiny preview thumbnail for feedback
     try {
-      const url = URL.createObjectURL(gotBlob as Blob);
+      const url = URL.createObjectURL(gotBlob);
       if (latestPreview) URL.revokeObjectURL(latestPreview);
       setLatestPreview(url);
     } catch {}
@@ -198,7 +199,7 @@ export default function ReceiptReviewPage() {
             videoRef.current.muted = true;
             await videoRef.current.play();
           }
-        } catch (err) {
+        } catch {
           // ignore — user can reopen camera
         }
       }
@@ -404,7 +405,7 @@ export default function ReceiptReviewPage() {
                     {/* left: thumbnail preview if available */}
                     <div className="relative">
                       {latestPreview ? (
-                        <img src={latestPreview} alt="preview" className="w-12 h-16 object-cover rounded" />
+                        <Image src={latestPreview} alt="preview" width={48} height={64} className="w-12 h-16 object-cover rounded" />
                       ) : (
                         <div className="w-12 h-16 bg-black/40 rounded border border-border" />
                       )}

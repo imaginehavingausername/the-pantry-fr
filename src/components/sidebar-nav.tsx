@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { Home, Users, User } from "lucide-react"
+import { Home, User } from "lucide-react"
 import Image from "next/image"
 
 interface SidebarNavProps {
