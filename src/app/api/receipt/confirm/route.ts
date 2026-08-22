@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma"; // adjust to your actual Prisma singleton path
-import { FOOD_CATEGORIES, FoodCategoryName } from "@/lib/receiptGemini";
+import { prisma } from "~/lib/prisma"; // adjust to your actual Prisma singleton path
+import { FOOD_CATEGORIES, FoodCategoryName } from "~/lib/receiptGemini";
 
 export const runtime = "nodejs";
 
