@@ -1,7 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "~/lib/prisma"; // adjust to your actual Prisma singleton path
-import { FOOD_CATEGORIES, FoodCategoryName } from "~/lib/receiptGemini";
-
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { prisma } from "~/lib/prisma";
+import { FOOD_CATEGORIES } from "~/lib/receiptGemini";
+import type { FoodCategoryName } from "~/lib/receiptGemini";
+ 
 export const runtime = "nodejs";
 
 // What the review page sends back after the user edits/confirms.
@@ -71,10 +73,10 @@ export async function POST(req: NextRequest) {
         prisma.foodCategory.upsert({ where: { name }, update: {}, create: { name } })
       )
     );
-    const categoryIdByName = new Map(categoryRecords.map((c: any) => [c.name, c.id]));
+    const categoryIdByName = new Map(categoryRecords.map((c) => [c.name, c.id]));
 
     const result = await prisma.$transaction(
-      async (tx: any) => {
+      async (tx) => {
         // 1. Apply quantity increments to existing items.
         const updatedItems = await Promise.all(
           body.matched_items.map((m) =>
