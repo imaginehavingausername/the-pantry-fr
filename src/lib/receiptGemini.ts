@@ -181,15 +181,30 @@ export async function generateWithFallback({
     const timer = setTimeout(() => controller.abort(), attemptTimeout);
 
     try {
-      const response = await genAI.models.generateContent({
+      // abortSignal MUST live inside config — @google/genai's GenerateContentConfig
+      // type is where it's actually read. Putting it at the top level of the request
+      // silently does nothing: the SDK ignores unrecognized top-level fields, so the
+      // abort never reaches the underlying HTTP request.
+      const attemptPromise = genAI.models.generateContent({
         model,
         contents,
-        config,
-        // AbortSignal support depends on the SDK version's request config passthrough —
-        // if your installed version doesn't accept this at the top level, move it under
-        // `config: { abortSignal: controller.signal }` per the SDK's current types.
-        abortSignal: controller.signal,
-      } as Parameters<typeof genAI.models.generateContent>[0]);
+        config: {
+          ...config,
+          abortSignal: controller.signal,
+        },
+      });
+
+      // Belt-and-suspenders on top of the abort signal above: there are open bugs in
+      // this SDK family where internal timeout/cancellation options don't reliably
+      // propagate to the underlying transport. Racing against a plain setTimeout
+      // guarantees this loop moves on to the next model on schedule regardless of
+      // whether the SDK's own cancellation actually takes effect — the abandoned
+      // request just finishes in the background and its result is discarded.
+      const hardTimeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error(`hard timeout after ${attemptTimeout}ms`)), attemptTimeout)
+      );
+
+      const response = await Promise.race([attemptPromise, hardTimeoutPromise]);
       clearTimeout(timer);
       return { response, modelUsed: model, attempts };
     } catch (err) {
@@ -231,6 +246,7 @@ Instructions:
 4. If a line is illegible, ambiguous, or clearly not a product (and doesn't fit new_items either), add it to unmatched_lines with the raw text and a short reason.
 5. If the same product appears on multiple receipt photos (e.g. a receipt that spans two photos), do not double-count it.
 6. Ignore any non-food items such as household items, cleaning supplies, or toiletries.
-7. Quantities: if a receipt line shows a pack/multipack count, use that as the quantity. If unclear, default to 1.
-8. Respond ONLY with JSON matching the required schema. Do not include markdown formatting or commentary.`;
+7. Ignore any meat/seafood items from the meat counter or seafood counter that are not pre-packaged. Pre-packaged meat/seafood is fine.
+8. Quantities: if a receipt line shows a pack/multipack count, use that as the quantity. If unclear, default to 1.
+9. Respond ONLY with JSON matching the required schema. Do not include markdown formatting or commentary.`;
 }

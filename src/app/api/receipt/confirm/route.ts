@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db as prisma } from "~/server/db";
-import { FOOD_CATEGORIES, type FoodCategoryName } from "~/lib/receiptGemini";
+import { prisma } from "@/lib/prisma"; // adjust to your actual Prisma singleton path
+import { FOOD_CATEGORIES, FoodCategoryName } from "@/lib/receiptGemini";
 
 export const runtime = "nodejs";
 
@@ -57,51 +57,65 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const result = await prisma.$transaction(async (tx) => {
-      // 1. Apply quantity increments to existing items.
-      const updatedItems = await Promise.all(
-        body.matched_items.map((m) =>
-          tx.foodItem.update({
-            where: { id: m.food_item_id },
-            data: { quantity: { increment: m.quantity_delta } },
-          })
-        )
-      );
+    // Resolve every distinct category name used across new_items to a FoodCategory id
+    // BEFORE opening the transaction. Categories come from the fixed, tiny
+    // FOOD_CATEGORIES set, so this is at most 8 upserts, done once, outside the
+    // transaction's timeout window — not once per item inside it. This is what was
+    // actually blowing the 5s interactive-transaction timeout: N items x M categories
+    // each as a separate round-trip upsert INSIDE the transaction.
+    const distinctCategoryNames = Array.from(
+      new Set(body.new_items.flatMap((item) => item.categories ?? []))
+    );
+    const categoryRecords = await Promise.all(
+      distinctCategoryNames.map((name) =>
+        prisma.foodCategory.upsert({ where: { name }, update: {}, create: { name } })
+      )
+    );
+    const categoryIdByName = new Map(categoryRecords.map((c: any) => [c.name, c.id]));
 
-      // 2. Create new items. Categories come from the fixed FOOD_CATEGORIES set, so we
-      //    look them up by name rather than freely creating new category rows. If a
-      //    category row doesn't exist yet (e.g. DB hasn't been seeded with all 8 yet),
-      //    it's created on the fly with that exact name so nothing silently drops.
-      const createdItems = [];
-      for (const item of body.new_items) {
-        const categoryConnections = [];
-        for (const name of item.categories ?? []) {
-          const category = await tx.foodCategory.upsert({
-            where: { name },
-            update: {},
-            create: { name },
-          });
-          categoryConnections.push({ foodCategoryId: category.id });
-        }
+    const result = await prisma.$transaction(
+      async (tx: any) => {
+        // 1. Apply quantity increments to existing items.
+        const updatedItems = await Promise.all(
+          body.matched_items.map((m) =>
+            tx.foodItem.update({
+              where: { id: m.food_item_id },
+              data: { quantity: { increment: m.quantity_delta } },
+            })
+          )
+        );
 
-        const created = await tx.foodItem.create({
-          data: {
-            name: item.name,
-            quantity: item.quantity,
-            expirationDate: new Date(item.expirationDate),
-            placement: item.placement,
-            keywords: item.keywords ?? [],
-            imageUrl: item.imageUrl ?? null,
-            categories: {
-              create: categoryConnections,
-            },
-          },
-        });
-        createdItems.push(created);
-      }
+        // 2. Create new items in parallel — category ids are already resolved above,
+        //    so each create is a single fast insert (+ junction rows), no per-item
+        //    network round trip to resolve a category first.
+        const createdItems = await Promise.all(
+          body.new_items.map((item) =>
+            tx.foodItem.create({
+              data: {
+                name: item.name,
+                quantity: item.quantity,
+                expirationDate: new Date(item.expirationDate),
+                placement: item.placement,
+                keywords: item.keywords ?? [],
+                imageUrl: item.imageUrl ?? null,
+                categories: {
+                  create: (item.categories ?? [])
+                    .map((name) => categoryIdByName.get(name))
+                    .filter((id): id is string => Boolean(id))
+                    .map((foodCategoryId) => ({ foodCategoryId })),
+                },
+              },
+            })
+          )
+        );
 
-      return { updatedItems, createdItems };
-    });
+        return { updatedItems, createdItems };
+      },
+      // Safety net on top of the real fix above — even fast queries can occasionally
+      // queue behind a slow Neon connection, so give real headroom rather than relying
+      // on Prisma's 5s default.
+      { timeout: 20_000, maxWait: 10_000 }
+    );
 
     return NextResponse.json({
       updatedCount: result.updatedItems.length,
