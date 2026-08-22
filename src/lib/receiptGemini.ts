@@ -7,8 +7,8 @@ export function getGenAI() {
 }
 
 export const RECEIPT_MODELS = [
-  "gemini-3.7-flash",
   "gemini-3.6-flash",
+  "gemini-3.7-flash",
   "gemini-3.5-flash",
 ] as const;
 
