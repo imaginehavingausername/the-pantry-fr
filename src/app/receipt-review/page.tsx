@@ -2,6 +2,8 @@
 
 import { useRef, useState, useEffect } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { UploadButton } from "~/lib/uploadthing"; // adjust to wherever your app exports these — see README
 import { FOOD_CATEGORIES, type FoodCategoryName } from "~/lib/receiptGemini";
 import { Button } from "~/components/ui/button";
@@ -62,6 +64,7 @@ async function resizeImage(file: File, maxDimension = 1800, quality = 0.82): Pro
 }
 
 export default function ReceiptReviewPage() {
+  const router = useRouter();
   const [images, setImages] = useState<File[]>([]);
   const [scanning, setScanning] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -335,8 +338,14 @@ export default function ReceiptReviewPage() {
     }
   }
   return (
-    <div className="max-w-lg mx-auto p-6">
-      <Card>
+    <div className="max-w-lg mx-auto p-6">       <Button
+         variant="outline"
+         className="border-[#528F04] text-[#528F04] mb-4 bg-transparent text-sm sm:text-base"
+         onClick={() => router.back()}
+       >
+         <ArrowLeft className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+         Go back
+       </Button>      <Card>
         <CardHeader>
           <CardTitle>Scan Receipt</CardTitle>
         </CardHeader>
