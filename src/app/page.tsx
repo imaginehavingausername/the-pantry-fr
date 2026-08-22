@@ -222,11 +222,23 @@ export default function Home() {
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
         <div className="flex items-center justify-between mb-4 sm:mb-6">
           <h1 className="text-4xl sm:text-3xl font-bold">the pantry</h1>
-          <Link href="/add-food">
-            <Button className="flex items-center justify-center bg-[#528F04] hover:bg-[#3e6b03] w-10 h-10 p-0">
-              <span className="text-3xl sm:text-4xl leading-none flex items-center justify-center">+</span>
-            </Button>
-          </Link>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button className="flex items-center justify-center bg-[#528F04] hover:bg-[#3e6b03] w-10 h-10 p-0">
+                <Plus className="h-6 w-6 sm:h-7 sm:w-7" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={() => router.push('/add-food')} className="text-sm flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                Add Food
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push('/receipt-review')} className="text-sm flex items-center gap-2">
+                <Search className="h-4 w-4" />
+                Scan Receipt
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4 mb-4 sm:mb-6">
