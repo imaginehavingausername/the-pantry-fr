@@ -54,7 +54,6 @@ export default function ProductDetail() {
   const params = useParams()
   const id = params.id as string
   const router = useRouter()
-  const signInUrl = "https://happy-sculpin-29.accounts.dev/sign-in"
 
   useEffect(() => {
     if (!isLoaded) {
@@ -62,14 +61,15 @@ export default function ProductDetail() {
     }
 
     if (!user) {
-      window.location.assign(signInUrl)
+      const returnUrl = encodeURIComponent(window.location.href)
+      router.replace(`/sign-in?redirect_url=${returnUrl}`)
       return
     }
 
     if (user.publicMetadata.family !== true) {
       router.replace("/unauthorised")
     }
-  }, [isLoaded, user, router, signInUrl])
+  }, [isLoaded, user, router])
   
   // State management
   const [foodItem, setFoodItem] = useState<FoodItemData | null>(null)
