@@ -137,8 +137,7 @@ interface GenerateWithFallbackArgs {
   contents: Parameters<ReturnType<typeof getGenAI>["models"]["generateContent"]>[0]["contents"];
   config: Parameters<ReturnType<typeof getGenAI>["models"]["generateContent"]>[0]["config"];
   models?: readonly string[];
-  perAttemptTimeoutMs?: number; // hard cap per model attempt
-  totalBudgetMs?: number; // stop trying new models once this much time has elapsed
+  imageCount?: number; // number of images being scanned, used to scale timeouts
 }
 
 export interface FallbackAttemptError {
@@ -158,9 +157,13 @@ export async function generateWithFallback({
   contents,
   config,
   models = RECEIPT_MODELS,
-  perAttemptTimeoutMs = 15_000,
-  totalBudgetMs = 45_000, // leave headroom under a 60s maxDuration for response parsing/DB reads
+  imageCount = 1,
 }: GenerateWithFallbackArgs) {
+  // Scale per-attempt timeout and total budget dynamically based on image count.
+  // E.g. base 20s + 6s per additional image, with a generous total budget under the 60s maxDuration.
+  const perAttemptTimeoutMs = Math.min(45_000, 20_000 + Math.max(0, imageCount - 1) * 8_000);
+  const totalBudgetMs = Math.min(55_000, 35_000 + Math.max(0, imageCount - 1) * 10_000);
+
   const genAI = getGenAI();
   const attempts: FallbackAttemptError[] = [];
   const start = Date.now();

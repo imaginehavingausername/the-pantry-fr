@@ -70,8 +70,7 @@ export async function POST(req: NextRequest) {
           responseMimeType: "application/json",
           responseSchema: receiptResponseSchema,
         },
-        // perAttemptTimeoutMs and totalBudgetMs defaults in receiptGemini provide
-        // sensible timeouts; adjust here if needed.
+        imageCount: files.length,
       }));
     } catch (err) {
       if (err instanceof ReceiptGenerationError) {
