@@ -7,9 +7,9 @@ export function getGenAI() {
 }
 
 export const RECEIPT_MODELS = [
-  "gemini-3.6-flash",
   "gemini-3.7-flash",
-  "gemini-3.5-flash",
+  "gemini-3.5-flash-lite",
+  "gemini-3.1-flash-lite"
 ] as const;
 
 export const RECEIPT_MODEL = RECEIPT_MODELS[0];
@@ -161,69 +161,102 @@ export async function generateWithFallback({
 }: GenerateWithFallbackArgs) {
   // Scale per-attempt timeout and total budget dynamically based on image count.
   // E.g. base 20s + 6s per additional image, with a generous total budget under the 60s maxDuration.
-  const perAttemptTimeoutMs = Math.min(45_000, 20_000 + Math.max(0, imageCount - 1) * 8_000);
-  const totalBudgetMs = Math.min(55_000, 35_000 + Math.max(0, imageCount - 1) * 10_000);
+  // Use a larger per-attempt timeout to tolerate temporary slowdowns,
+  // while keeping the overall budget safely under the function maxDuration.
+  const perAttemptTimeoutMs = Math.min(45_000, 30_000 + Math.max(0, imageCount - 1) * 8_000);
+  const totalBudgetMs = Math.min(55_000, 45_000 + Math.max(0, imageCount - 1) * 8_000);
 
   const genAI = getGenAI();
   const attempts: FallbackAttemptError[] = [];
-  const start = Date.now();
 
-  for (const model of models) {
-    const elapsed = Date.now() - start;
-    const remaining = totalBudgetMs - elapsed;
+  // Start one request per model in parallel and use the first successful one.
+  // Each attempt has its own AbortController and timeout so we can cancel
+  // remaining requests as soon as one succeeds.
+  const controllers: Record<string, AbortController> = {};
+  const timers: Record<string, NodeJS.Timeout> = {};
 
-    // Not enough budget left for this attempt to plausibly succeed — stop instead of
-    // starting a call that will just get killed by the platform anyway.
-    if (remaining < 3_000) {
-      attempts.push({ model, message: "skipped — out of time budget" });
-      break;
+  const attemptPromises = models.map((model) => {
+    const controller = new AbortController();
+    controllers[model] = controller;
+
+    // per-model attempt timeout — keep it bounded by total budget
+    const attemptTimeout = Math.min(perAttemptTimeoutMs, totalBudgetMs);
+    const timer = setTimeout(() => controller.abort(), attemptTimeout);
+    timers[model] = timer;
+
+    const attempt = (async () => {
+      try {
+        const p = genAI.models.generateContent({
+          model,
+          contents,
+          config: {
+            ...config,
+            abortSignal: controller.signal,
+          },
+        });
+
+        const hardTimeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error(`hard timeout after ${attemptTimeout}ms`)), attemptTimeout)
+        );
+
+        const response = await Promise.race([p, hardTimeoutPromise]);
+        clearTimeout(timer);
+        return { response, model } as const;
+      } catch (err) {
+        clearTimeout(timer);
+        const message =
+          controller.signal.aborted
+            ? `timed out after ${attemptTimeout}ms`
+            : err instanceof Error
+              ? err.message
+              : String(err);
+        // bubble up failure so Promise.any can continue to wait for others
+        throw { model, message };
+      }
+    })();
+
+    return attempt;
+  });
+
+  try {
+    const { response, model } = await Promise.any(attemptPromises);
+    // Cancel other in-flight requests
+    for (const m of models) {
+      if (m !== model) {
+        try {
+          controllers[m]?.abort();
+          clearTimeout(timers[m]);
+        } catch {}
+      }
+    }
+    return { response, modelUsed: model, attempts };
+  } catch (aggErr) {
+    // All attempts failed — gather error details from settled promises
+    const settled = await Promise.allSettled(attemptPromises);
+    for (const s of settled) {
+      if (s.status === "rejected") {
+        const reason = s.reason as { model?: string; message?: string } | Error | string;
+        if (typeof reason === "object" && reason !== null && "model" in reason) {
+          attempts.push({ model: (reason as any).model, message: (reason as any).message });
+        } else if (s.status === "rejected") {
+          const msg = s.reason instanceof Error ? s.reason.message : String(s.reason);
+          attempts.push({ model: "unknown", message: msg });
+        }
+      }
     }
 
-    const attemptTimeout = Math.min(perAttemptTimeoutMs, remaining);
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), attemptTimeout);
-
-    try {
-      // abortSignal MUST live inside config — @google/genai's GenerateContentConfig
-      // type is where it's actually read. Putting it at the top level of the request
-      // silently does nothing: the SDK ignores unrecognized top-level fields, so the
-      // abort never reaches the underlying HTTP request.
-      const attemptPromise = genAI.models.generateContent({
-        model,
-        contents,
-        config: {
-          ...config,
-          abortSignal: controller.signal,
-        },
-      });
-
-      // Belt-and-suspenders on top of the abort signal above: there are open bugs in
-      // this SDK family where internal timeout/cancellation options don't reliably
-      // propagate to the underlying transport. Racing against a plain setTimeout
-      // guarantees this loop moves on to the next model on schedule regardless of
-      // whether the SDK's own cancellation actually takes effect — the abandoned
-      // request just finishes in the background and its result is discarded.
-      const hardTimeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error(`hard timeout after ${attemptTimeout}ms`)), attemptTimeout)
-      );
-
-      const response = await Promise.race([attemptPromise, hardTimeoutPromise]);
-      clearTimeout(timer);
-      return { response, modelUsed: model, attempts };
-    } catch (err) {
-      clearTimeout(timer);
-      const message =
-        controller.signal.aborted
-          ? `timed out after ${attemptTimeout}ms`
-          : err instanceof Error
-            ? err.message
-            : String(err);
-      attempts.push({ model, message });
-      // fall through to the next model
+    throw new ReceiptGenerationError(attempts);
+  } finally {
+    // ensure all timers/controllers are cleaned up
+    for (const m of models) {
+      try {
+        controllers[m]?.abort();
+      } catch {}
+      try {
+        clearTimeout(timers[m]);
+      } catch {}
     }
   }
-
-  throw new ReceiptGenerationError(attempts);
 }
 
 export function buildReceiptPrompt(pantryItems: { id: string; name: string; keywords: string[] }[]) {
