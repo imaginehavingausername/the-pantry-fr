@@ -273,13 +273,13 @@ Instructions:
 1. Read every purchasable product line on the receipt (ignore subtotals, tax, totals, sales, coupons, loyalty point lines, and store info).
 2. For each product line, try to match it to one existing pantry item by name/keywords, allowing for receipts' abbreviated or truncated product names (e.g. "ORG BANANA" -> "Organic Bananas"). If matched, add it to matched_items with the item's exact "id", the quantity purchased as quantity_delta, and your confidence.
 3. If a line does NOT reasonably match any existing item, add it to new_items with:
-   - your best reading of a clean product name
+   - your best reading of a clean, simple product name (do not include extra words such as organic, these go in keywords)
    - the quantity purchased
    - suggested_categories: zero or more categories from the ALLOWED CATEGORIES list above that fit this item (a food can fit more than one, e.g. a bag of frozen peas might be both "Dinner" and "Veggie" — use your judgment, and it's fine to return an empty array if nothing fits well)
    - suggested_keywords: useful search terms for this item — brand name if visible on the receipt/packaging, descriptors like "organic", "gallon", "low-fat", and common alternate/casual names a person might search for it by (e.g. "cookies" for a box of Oreos)
    - your confidence
    Do not invent items that are not on the receipt.
-4. If a line is illegible, ambiguous, or clearly not a product (and doesn't fit new_items either), add it to unmatched_lines with the raw text and a short reason.
+4. If a line is illegible, ambiguous, or clearly not a kitchen item (and doesn't fit new_items either), add it to unmatched_lines with the raw text and a short reason.
 5. If the same product appears on multiple receipt photos (e.g. a receipt that spans two photos), do not double-count it.
 6. Ignore any non-food items such as household items, cleaning supplies, or toiletries.
 7. Ignore any meat/seafood items from the meat counter or seafood counter that are not pre-packaged. Pre-packaged meat/seafood is fine.
