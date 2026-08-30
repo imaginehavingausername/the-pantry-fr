@@ -273,7 +273,7 @@ Instructions:
 1. Read every purchasable product line on the receipt (ignore subtotals, tax, totals, sales, coupons, loyalty point lines, and store info).
 2. For each product line, try to match it to one existing pantry item by name/keywords, allowing for receipts' abbreviated or truncated product names (e.g. "ORG BANANA" -> "Organic Bananas"). If matched, add it to matched_items with the item's exact "id", the quantity purchased as quantity_delta, and your confidence.
 3. If a line does NOT reasonably match any existing item, add it to new_items with:
-   - your best reading of a clean, simple product name (do not include extra words such as organic, these go in keywords)
+   - your best reading of a clean, simple product name (do not include extra words such as organic or brand names, these go in keywords)
    - the quantity purchased
    - suggested_categories: zero or more categories from the ALLOWED CATEGORIES list above that fit this item (a food can fit more than one, e.g. a bag of frozen peas might be both "Dinner" and "Veggie" — use your judgment, and it's fine to return an empty array if nothing fits well)
    - suggested_keywords: useful search terms for this item — brand name if visible on the receipt/packaging, descriptors like "organic", "gallon", "low-fat", and common alternate/casual names a person might search for it by (e.g. "cookies" for a box of Oreos)
