@@ -109,9 +109,9 @@ export default function Home() {
       
       const response = await fetch('/api/fooditem', {
         signal: controller.signal,
-        // Add caching headers
+        // Add cache-control: no-cache to force revalidation
         headers: {
-          'Cache-Control': 'max-age=300', // Cache for 5 minutes
+          'Cache-Control': 'no-cache',
         },
       })
       
