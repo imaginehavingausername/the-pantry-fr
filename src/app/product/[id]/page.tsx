@@ -122,7 +122,12 @@ export default function ProductDetail() {
   const fetchFoodItem = async () => {
     try {
       setLoading(true)
-      const response = await fetch(`/api/fooditem?id=${id}`)
+      // Add cache-control: no-cache to force revalidation
+      const response = await fetch(`/api/fooditem?id=${id}`, {
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
+      })
       
       if (!response.ok) {
         if (response.status === 404) {
