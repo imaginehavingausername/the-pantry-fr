@@ -58,7 +58,7 @@ async function resizeImage(file: File, maxDimension = 1800, quality = 0.82): Pro
   ctx.drawImage(bitmap, 0, 0, width, height);
 
   const blob: Blob = await new Promise((resolve) =>
-    canvas.toBlob((b) => resolve(b!), "image/jpeg", quality)
+    canvas.toBlob((b) => b && resolve(b), "image/jpeg", quality)
   );
   return new File([blob], file.name.replace(/\.\w+$/, ".jpg"), { type: "image/jpeg" });
 }
@@ -260,7 +260,7 @@ export default function ReceiptReviewPage() {
 
       const data = await res.json();
       if (!res.ok) {
-        const attempts = (data as any).attempts;
+        const attempts = data.attempts;
         const attemptsMsg = Array.isArray(attempts)
           ? ` Attempts: ${attempts.map((a: any) => `${a.model}: ${a.message}`).join(" | ")}`
           : "";

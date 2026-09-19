@@ -302,7 +302,7 @@ export async function PUT(request: Request) {
         // explicitly set to null via Prisma's set operator
         (updateData as any).expirationDate = { set: null };
       } else {
-        updateData.expirationDate = parsedExpirationDate as any;
+        updateData.expirationDate = parsedExpirationDate;
       }
     }
     if (quantity !== undefined) updateData.quantity = quantity;
