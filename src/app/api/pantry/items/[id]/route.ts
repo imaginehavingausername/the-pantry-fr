@@ -30,7 +30,7 @@ interface PrismaFoodItemResult {
   id: string;
   name: string;
   quantity: number;
-  expirationDate: Date;
+  expirationDate: Date | null;
   placement: string;
   keywords: string[] | null;
   categories: Array<{
@@ -149,7 +149,19 @@ export async function PATCH(
     if (name !== undefined && typeof name === 'string') updateData.name = name.trim();
     if (quantity !== undefined && typeof quantity === 'number') updateData.quantity = quantity;
     if (placement !== undefined && typeof placement === 'string') updateData.placement = placement;
-    if (expirationDate !== undefined) updateData.expirationDate = new Date(expirationDate);
+    if (expirationDate !== undefined) {
+      if (expirationDate === null || expirationDate === '') {
+        updateData.expirationDate = null;
+      } else if (typeof expirationDate === 'string') {
+        const date = new Date(expirationDate);
+        if (Number.isNaN(date.getTime())) {
+          return NextResponse.json({ error: 'Expiration date must be a valid date when provided.' }, { status: 400 });
+        }
+        updateData.expirationDate = date;
+      } else {
+        return NextResponse.json({ error: 'Expiration date must be a valid date when provided.' }, { status: 400 });
+      }
+    }
     if (keywords !== undefined && Array.isArray(keywords)) updateData.keywords = keywords;
 
     // Handle category updates via transaction

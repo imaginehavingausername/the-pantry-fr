@@ -15,7 +15,7 @@ interface ConfirmedMatchedItem {
 interface ConfirmedNewItem {
   name: string;
   quantity: number;
-  expirationDate: string; // ISO date string — REQUIRED, user fills this in on the review page
+  expirationDate?: string | null;
   placement: string; // REQUIRED, user fills this in on the review page
   categories: FoodCategoryName[]; // must be a subset of FOOD_CATEGORIES
   keywords: string[];
@@ -39,13 +39,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Malformed request body." }, { status: 400 });
   }
 
-  // Validate the required fields Gemini can't fill in, since the DB schema requires them.
+  // Validate the fields that must be supplied for a usable pantry entry.
   for (const item of body.new_items) {
-    if (!item.name || !item.quantity || !item.expirationDate || !item.placement) {
+    if (!item.name || !item.quantity || !item.placement) {
       return NextResponse.json(
-        { error: `New item "${item.name || "(unnamed)"}" is missing a required field (expirationDate/placement/quantity).` },
+        { error: `New item "${item.name || "(unnamed)"}" is missing a required field (placement/quantity).` },
         { status: 400 }
       );
+    }
+    if (item.expirationDate !== undefined && item.expirationDate !== null && item.expirationDate !== '') {
+      if (typeof item.expirationDate !== 'string' || Number.isNaN(new Date(item.expirationDate).getTime())) {
+        return NextResponse.json(
+          { error: `New item "${item.name}" has an invalid expiration date.` },
+          { status: 400 }
+        );
+      }
     }
     const invalidCategories = (item.categories ?? []).filter(
       (c) => !FOOD_CATEGORIES.includes(c)
@@ -96,7 +104,7 @@ export async function POST(req: NextRequest) {
               data: {
                 name: item.name,
                 quantity: item.quantity,
-                expirationDate: new Date(item.expirationDate),
+                expirationDate: item.expirationDate ? new Date(item.expirationDate) : null,
                 placement: item.placement,
                 keywords: item.keywords ?? [],
                 imageUrl: item.imageUrl ?? null,

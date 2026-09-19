@@ -30,7 +30,7 @@ export const revalidate = 60;
 // Type definitions for request bodies
 interface CreateFoodItemBody {
   name: string;
-  expirationDate: string;
+  expirationDate?: string | null;
   quantity: number;
   imageUrl?: string | null;
   keywords?: string[];
@@ -41,7 +41,7 @@ interface CreateFoodItemBody {
 interface UpdateFoodItemBody {
   id: string;
   name?: string;
-  expirationDate?: string;
+  expirationDate?: string | null;
   quantity?: number;
   imageUrl?: string | null;
   keywords?: string[];
@@ -71,10 +71,18 @@ function isValidCreateBody(body: unknown): body is CreateFoodItemBody {
   const b = body as Record<string, unknown>;
   return (
     typeof b.name === 'string' &&
-    typeof b.expirationDate === 'string' &&
     typeof b.quantity === 'number' &&
     typeof b.placement === 'string'
   );
+}
+
+function parseExpirationDate(value: unknown): Date | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null || value === '') return null;
+  if (typeof value !== 'string') return undefined;
+
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? undefined : date;
 }
 
 function isValidUpdateBody(body: unknown): body is UpdateFoodItemBody {
@@ -181,39 +189,75 @@ export async function POST(request: Request) {
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    
-    const body: unknown = await request.json();
-
-    if (!isValidCreateBody(body)) {
-      return NextResponse.json({ error: 'Missing required fields: name, expirationDate, quantity, placement.' }, { status: 400 });
+    let body: unknown
+    try {
+      body = await request.json()
+    } catch (err) {
+      console.error('Failed to parse JSON body for POST /api/fooditem', err)
+      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
     }
 
-    const { name, expirationDate, quantity, imageUrl, keywords, placement, categoryNames } = body;
+    console.debug('POST /api/fooditem body:', body)
+
+    if (!isValidCreateBody(body)) {
+      return NextResponse.json({ error: 'Missing required fields: name, quantity, placement.' }, { status: 400 });
+    }
+
+    const { name, expirationDate, quantity, imageUrl, keywords, placement, categoryNames } = body as Record<string, any>;
+    const parsedExpirationDate = parseExpirationDate(expirationDate);
+    if (expirationDate !== undefined && parsedExpirationDate === undefined) {
+      return NextResponse.json({ error: 'Expiration date must be a valid date when provided.' }, { status: 400 });
+    }
 
     // Use transaction for atomic operations
-    const newFoodItem = await prisma.$transaction(async (tx) => {
-      return await tx.foodItem.create({
-        data: {
+    // Normalize values to be safe for Prisma
+    const safeKeywords = Array.isArray(keywords) ? keywords : []
+    const safeImageUrl = imageUrl || null
+    const safeCategoryNames = Array.isArray(categoryNames) ? categoryNames : []
+
+    let newFoodItem
+    try {
+      newFoodItem = await prisma.$transaction(async (tx) => {
+        // Build data object conditionally to avoid assigning null to non-nullable typed fields
+        const data: any = {
           name,
-          expirationDate: new Date(expirationDate),
           quantity,
-          imageUrl: imageUrl || null,
-          keywords: keywords ?? [],
+          imageUrl: safeImageUrl,
+          keywords: safeKeywords,
           placement,
           categories: {
-            create: categoryNames?.map((categoryName: string) => ({
+            create: safeCategoryNames.map((categoryName: string) => ({
               foodCategory: {
                 connectOrCreate: {
                   where: { name: categoryName },
                   create: { name: categoryName },
                 },
               },
-            })) ?? [],
+            })),
           },
-        },
-        select: foodItemSelect,
+        }
+
+        // parsedExpirationDate can be: undefined (not provided), null (explicitly cleared), or Date
+        if (parsedExpirationDate !== undefined) {
+          // include null explicitly to clear the DB value, or include Date to set it
+          data.expirationDate = parsedExpirationDate === null ? null : parsedExpirationDate
+        }
+
+        return await tx.foodItem.create({
+          data,
+          select: foodItemSelect,
+        });
       });
-    });
+    } catch (err) {
+      console.error('Prisma error creating food item:', err)
+      // If Prisma returns a known error, expose a helpful message
+      if (err instanceof Prisma.PrismaClientKnownRequestError) {
+        return NextResponse.json({ error: err.message }, { status: 400 })
+      }
+      const msg = err instanceof Error ? err.message : String(err)
+      // Return the error message to the client during development for debugging
+      return NextResponse.json({ error: msg }, { status: 500 })
+    }
 
     // Invalidate cached API response so clients see fresh data
     try {
@@ -224,8 +268,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json(newFoodItem, { status: 201 });
   } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    console.error('POST /api/fooditem top-level error:', error);
+    const msg = error instanceof Error ? error.message : String(error)
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
 
@@ -247,7 +292,19 @@ export async function PUT(request: Request) {
     const updateData: Prisma.FoodItemUpdateInput = {};
 
     if (name !== undefined) updateData.name = name;
-    if (expirationDate !== undefined) updateData.expirationDate = new Date(expirationDate);
+    if (expirationDate !== undefined) {
+      const parsedExpirationDate = parseExpirationDate(expirationDate);
+      if (parsedExpirationDate === undefined) {
+        return NextResponse.json({ error: 'Expiration date must be a valid date when provided.' }, { status: 400 });
+      }
+      // Prisma update input accepts Date or field update object; avoid assigning null directly
+      if (parsedExpirationDate === null) {
+        // explicitly set to null via Prisma's set operator
+        (updateData as any).expirationDate = { set: null };
+      } else {
+        updateData.expirationDate = parsedExpirationDate as any;
+      }
+    }
     if (quantity !== undefined) updateData.quantity = quantity;
     if (imageUrl !== undefined) updateData.imageUrl = imageUrl;
     if (keywords !== undefined) updateData.keywords = keywords;

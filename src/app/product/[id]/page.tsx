@@ -28,7 +28,7 @@ interface FoodItemData {
   name: string;
   quantity: number;
   placement: string;
-  expirationDate: string;
+  expirationDate: string | null;
   imageUrl?: string;
   keywords: string[];
   hidden: boolean;
@@ -42,7 +42,7 @@ interface FoodItemData {
 interface UpdateFormData {
   name: string;
   quantity: number;
-  expirationDate: any;
+  expirationDate: string;
   placement: string;
   keywords: string[];
   categoryNames: string[];
@@ -144,7 +144,7 @@ export default function ProductDetail() {
       setFormData({
         name: data.name,
         quantity: data.quantity,
-        expirationDate: data.expirationDate.split('T')[0], // Format for date input
+        expirationDate: data.expirationDate?.split('T')[0] ?? '', // Format for date input
         placement: data.placement,
         keywords: data.keywords,
         categoryNames: categoryNames,
@@ -270,12 +270,13 @@ export default function ProductDetail() {
   // Form validation
   const validateForm = (): string | null => {
     if (!formData.name.trim()) return "Name is required"
-    if (!formData.expirationDate) return "Expiration date is required"
     if (formData.quantity < 0) return "Quantity must be greater than 0"
     if (!formData.placement.trim()) return "Placement is required"
     
-    const expDate = new Date(formData.expirationDate)
-    if (isNaN(expDate.getTime())) return "Please enter a valid expiration date"
+    if (formData.expirationDate) {
+      const expDate = new Date(formData.expirationDate)
+      if (isNaN(expDate.getTime())) return "Please enter a valid expiration date"
+    }
     
     return null
   }
@@ -309,7 +310,8 @@ export default function ProductDetail() {
           id: id,
           name: formData.name.trim(),
           quantity: formData.quantity,
-          expirationDate: formData.expirationDate,
+          // Send `null` when the field is empty so the API clears the expirationDate
+          expirationDate: formData.expirationDate === '' ? null : formData.expirationDate,
           placement: formData.placement.trim(),
           keywords: formData.keywords,
           categoryNames: formData.categoryNames,
@@ -318,8 +320,17 @@ export default function ProductDetail() {
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        let errorMsg = `HTTP error! status: ${response.status}`
+        try {
+          const errorData = await response.json()
+          errorMsg = errorData?.error || errorMsg
+        } catch (e) {
+          try {
+            const text = await response.text()
+            if (text) errorMsg = text
+          } catch {}
+        }
+        throw new Error(errorMsg)
       }
 
       const updatedItem = await response.json()
@@ -497,14 +508,13 @@ export default function ProductDetail() {
           </div>
 
           <div>
-            <Label htmlFor="expiration" className="text-sm sm:text-base">Expiration Date *</Label>
+            <Label htmlFor="expiration" className="text-sm sm:text-base">Expiration Date (optional)</Label>
             <Input 
               id="expiration" 
               type="date"
               className="mt-1 text-sm sm:text-base"
               value={formData.expirationDate}
               onChange={(e) => handleInputChange('expirationDate', e.target.value)}
-              required
             />
           </div>
 

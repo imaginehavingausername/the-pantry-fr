@@ -31,7 +31,7 @@ interface PrismaFoodItemResult {
   id: string;
   name: string;
   quantity: number;
-  expirationDate: Date;
+  expirationDate: Date | null;
   placement: string;
   keywords: string[] | null;
   categories: Array<{
@@ -65,8 +65,7 @@ function formatItem(item: PrismaFoodItemResult): FormattedPantryItem {
     id: item.id,
     name: item.name,
     quantity: item.quantity,
-    // Provide a fallback empty string to satisfy 'noUncheckedIndexedAccess'
-    expiration: item.expirationDate.toISOString().split('T')[0] || '',
+    expiration: item.expirationDate?.toISOString().split('T')[0] || '',
     categories: item.categories.map((c) => c.foodCategory.name),
     placement: item.placement,
     keywords: item.keywords || [],
@@ -155,8 +154,7 @@ export async function GET(request: Request) {
           id: item.id,
           name: item.name,
           quantity: item.quantity,
-          // Fallback included here as well
-          expiration: item.expirationDate.toISOString().split('T')[0] || '',
+          expiration: item.expirationDate?.toISOString().split('T')[0] || '',
           categories: item.categories.map((c) => c.foodCategory.name),
           placement: item.placement,
           keywords: item.keywords || [],
@@ -205,8 +203,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Item name is required.' }, { status: 400 });
     }
 
-    // Default expiration: 14 days from now if not provided
-    const expDate = expirationDate ? new Date(expirationDate) : new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+    const expDate = expirationDate === null || expirationDate === undefined || expirationDate === ''
+      ? null
+      : typeof expirationDate === 'string'
+        ? new Date(expirationDate)
+        : undefined;
+    if (expDate === undefined || (expDate && Number.isNaN(expDate.getTime()))) {
+      return NextResponse.json({ error: 'Expiration date must be a valid date when provided.' }, { status: 400 });
+    }
 
     const newFoodItem = await prisma.$transaction(async (tx) => {
       return await tx.foodItem.create({

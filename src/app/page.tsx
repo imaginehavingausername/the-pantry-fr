@@ -18,7 +18,7 @@ interface FoodItemData {
   name: string;
   quantity: number;
   placement: string;
-  expirationDate: string; // Assuming this can be used for "newly updated" or a separate 'updatedAt' field is needed
+  expirationDate: string | null; // Assuming this can be used for "newly updated" or a separate 'updatedAt' field is needed
   imageUrl: string;
   keywords: string[];
   hidden: boolean;
@@ -164,8 +164,8 @@ export default function Home() {
         // Assuming 'updatedAt' field exists or using 'expirationDate' as a fallback for 'newly updated'
         // Ideally, you'd have an 'updatedAt' timestamp from your API for this.
         return sortedItems.sort((a, b) => {
-          const dateA = new Date(a.expirationDate).getTime();
-          const dateB = new Date(b.expirationDate).getTime();
+          const dateA = a.expirationDate ? new Date(a.expirationDate).getTime() : Number.POSITIVE_INFINITY;
+          const dateB = b.expirationDate ? new Date(b.expirationDate).getTime() : Number.POSITIVE_INFINITY;
           return dateA - dateB; // Newest first
         });
       default:
@@ -194,9 +194,9 @@ export default function Home() {
   }, [foodItems, searchTerm, sortOrder, sortFoodItems])
 
   // OPTIMIZED: Memoized date formatting
-  const formatDate = useCallback((dateString: string) => {
+  const formatDate = useCallback((dateString: string | null) => {
     // Check if dateString is valid to prevent "Invalid Date" errors
-    if (!dateString) return "N/A"; 
+    if (!dateString) return "";
     try {
       return new Date(dateString).toLocaleDateString();
     } catch (e) {

@@ -160,13 +160,14 @@ export default function AddFood() {
   // Form validation
   const validateForm = (): string | null => {
     if (!formData.name.trim()) return "Name is required"
-    if (!formData.expirationDate) return "Expiration date is required"
     if (formData.quantity <= 0) return "Quantity must be greater than 0"
     if (!formData.placement.trim()) return "Placement is required"
     
     // Validate date format and ensure it's not in the past
-    const expDate = new Date(formData.expirationDate)
-    if (isNaN(expDate.getTime())) return "Please enter a valid expiration date"
+    if (formData.expirationDate) {
+      const expDate = new Date(formData.expirationDate)
+      if (isNaN(expDate.getTime())) return "Please enter a valid expiration date"
+    }
     
     return null
   }
@@ -200,7 +201,8 @@ export default function AddFood() {
         body: JSON.stringify({
           name: formData.name.trim(),
           quantity: formData.quantity,
-          expirationDate: formData.expirationDate,
+          // Send `null` when blank so the server will store a NULL expirationDate
+          expirationDate: formData.expirationDate === '' ? null : formData.expirationDate,
           placement: formData.placement.trim(),
           keywords: formData.keywords,
           categoryNames: formData.categoryNames,
@@ -209,8 +211,17 @@ export default function AddFood() {
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        let errorMsg = `HTTP error! status: ${response.status}`
+        try {
+          const errorData = await response.json()
+          errorMsg = errorData?.error || errorMsg
+        } catch (e) {
+          try {
+            const text = await response.text()
+            if (text) errorMsg = text
+          } catch {}
+        }
+        throw new Error(errorMsg)
       }
 
       const newItem = await response.json()
@@ -231,13 +242,6 @@ export default function AddFood() {
   // Format date for input (YYYY-MM-DD)
   const formatDateForInput = (date: Date) => {
     return date.toISOString().split('T')[0]
-  }
-
-  // Set default expiration date to tomorrow
-  const getDefaultExpirationDate = () => {
-    const tomorrow = new Date()
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    return formatDateForInput(tomorrow)
   }
 
   return (
@@ -354,7 +358,7 @@ export default function AddFood() {
           </div>
 
           <div>
-            <Label htmlFor="expiration" className="text-sm sm:text-base">Expiration Date *</Label>
+            <Label htmlFor="expiration" className="text-sm sm:text-base">Expiration Date (optional)</Label>
             <Input 
               id="expiration" 
               type="date"
@@ -362,7 +366,6 @@ export default function AddFood() {
               value={formData.expirationDate}
               onChange={(e) => handleInputChange('expirationDate', e.target.value)}
               min={formatDateForInput(new Date())} // Prevent past dates
-              required
             />
           </div>
 

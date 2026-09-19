@@ -11,7 +11,7 @@ datasource db {
 model FoodItem {
   id              String      @id @default(uuid())
   name            String
-  expirationDate  DateTime
+  expirationDate  DateTime?
   quantity        Int
   imageUrl        String?     // Optional, as not all items might have an image
   keywords        String[]    // Storing keywords as an array of strings
